@@ -1,0 +1,39 @@
+---
+title: ""
+author: Dan Lu
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: html_document
+---
+
+
+```{r global_options, include=FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+
+```{r include=FALSE}
+library(tidyverse)
+library(magrittr)
+options(tibble.width = Inf)
+options(scipen=999)
+```
+
+
+```{bash}
+
+cat *.ibd > WI_IBD_hap.tsv
+```
+
+
+
+```{r}
+
+ibd <- read.delim("~/Dropbox/Andersen lab/LabFolders/DanLu/7.popgen/WI_IBD_hap.tsv", header=FALSE, stringsAsFactors=FALSE) %>% mutate(V9=0.01, V10=0, V11=1500, V12=0.3)
+
+write_tsv(ibd, "haplotype.tsv", col_names = F)
+```
+
+
+```{r}
+sessionInfo()
+```
