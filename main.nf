@@ -120,6 +120,7 @@ process subset_iso_ref_strains {
     conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
     memory 16.GB
+    cpus 4
 
     publishDir "${params.output}", mode: 'copy'
 
@@ -132,24 +133,19 @@ process subset_iso_ref_strains {
 
 
     """
-    cp /projects/b1059/projects/Dan/post-gatk-nf/20201101_release20201015/popgen-20201101/WI.20201015.hard-filter.ref_strain.vcf.gz WI.20201015.hard-filter.ref_strain.vcf.gz
 
-    cp /projects/b1059/projects/Dan/post-gatk-nf/20201101_release20201015/popgen-20201101/WI.20201015.hard-filter.ref_strain.vcf.gz.tbi WI.20201015.hard-filter.ref_strain.vcf.gz.tbi
+    cut -f1 ${params.sample_sheet} > strain_list.txt
 
-    cp /projects/b1059/projects/Dan/post-gatk-nf/20201101_release20201015/popgen-20201101/WI.20201015.hard-filter.ref_strain.vcf.gz.stats.txt WI.20201015.hard-filter.ref_strain.vcf.gz.stats.txt
+    output_vcf=`echo ${vcf} | sed 's/hard-filter.vcf.gz/hard-filter.ref_strain.vcf.gz/'`
 
+    bcftools view -S strain_list.txt -O u ${vcf} | bcftools view -O v --min-af 0.000001 --max-af 0.999999 | vcffixup - | bcftools view --threads 4 -O z > \${output_vcf}
 
-#    cut -f1 ${params.sample_sheet} > strain_list.txt
+    bcftools index \${output_vcf}
 
-#    output_vcf=`echo ${vcf} | sed 's/hard-filter.vcf.gz/hard-filter.ref_strain.vcf.gz/'`
+    bcftools index --tbi \${output_vcf}
 
-#    bcftools view -S strain_list.txt -O u ${vcf} | bcftools view -O v --min-af 0.000001 --max-af 0.999999 | vcffixup - | bcftools view --threads 3 -O z > \${output_vcf}
+    bcftools stats -s- \${output_vcf} > \${output_vcf}.stats.txt
 
-#    bcftools index \${output_vcf}
-
-#    bcftools index --tbi \${output_vcf}
-
-#    bcftools stats -s- \${output_vcf} > \${output_vcf}.stats.txt
     """
 
 }
