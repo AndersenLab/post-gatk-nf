@@ -12,9 +12,9 @@ date = new Date().format( 'yyyyMMdd' )
 contigs = Channel.from("I","II","III","IV","V","X")
 params.species = ""
 
-if (params.debug.toString() == "true") {
+if (params.debug) {
 
-    params.vcf = "${workflow.projectDir}/test_data/WI.20200811.hard-filter.vcf.gz"
+    params.hard_filtered_vcf = "${workflow.projectDir}/test_data/WI.20200811.hard-filter.vcf.gz"
     params.sample_sheet = "${workflow.projectDir}/test_data/sample_sheet.tsv"
     params.bin_bed = "${workflow.projectDir}/bin/bins_1kb_ce.bed"
     params.bam_folder = "${workflow.projectDir}/test_data/bam"
@@ -22,7 +22,7 @@ if (params.debug.toString() == "true") {
 
 } else {
     // Read input
-    params.vcf = ""
+    params.hard_filtered_vcf = ""
     params.sample_sheet = ""
 
     // 1kb bins for all chromosomes
@@ -35,14 +35,23 @@ if (params.debug.toString() == "true") {
 }
 
 
-if ( !params.species ) error "Parameter --species is required, options are: ce, ct or cb."
-if ( !params.vcf ) error "Parameter --vcf is required. Specify path to the full vcf."
-if ( !params.sample_sheet ) error "Parameter --sample_sheet is required. It should contain a column of strain names, a column of bam file names and a column of bai file names WITH NO HEADERS. If the bam and bai column do not contain full path to the files, specify that path with --bam_folder."
+// Variant annotation files. The same for debug or normal run. 
+params.csq_gff = "${reference_dir}/csq/${species}.${project}.${ws_build}.csq.gff3.gz"
+params.AA_score = "${workflow.projectDir}/bin/AA_Scores.tsv"
+params.AA_length = "${workflow.projectDir}/bin/gff_AA_Length.tsv"
+params.dust_bed = "${reference_dir}/lcr/${species}.${project}.${ws_build}.dust.bed.gz"
+params.repeat_masker_bed = "${reference_dir}/lcr/${species}.${project}.${ws_build}.repeat_masker.bed.gz"
+params.hard_filtered_vcfanno_config = "${workflow.projectDir}/bin/vcfanno.toml"
+
+
+if ( params.species==null ) error "Parameter --species is required, options are: ce, ct or cb."
+if ( params.hard_filtered_vcf==null ) error "Parameter --vcf is required. Specify path to the full vcf."
+if ( params.sample_sheet==null ) error "Parameter --sample_sheet is required. It should contain a column of strain names, a column of bam file names and a column of bai file names WITH NO HEADERS. If the bam and bai column do not contain full path to the files, specify that path with --bam_folder."
 
 
 // Read input
-vcf = Channel.fromPath("${params.vcf}")
-vcf_index = Channel.fromPath("${params.vcf}.tbi")
+input_vcf = Channel.fromPath("${params.hard_filtered_vcf}")
+input_vcf_index = Channel.fromPath("${params.hard_filtered_vcf}.tbi")
 
 // Read sample sheet
 sample_sheet = Channel.fromPath(params.sample_sheet)
@@ -70,7 +79,7 @@ nextflow main.nf -profile quest --vcf=hard-filtered.vcf --sample_sheet=sample_sh
     ==========           ===========                                              ========================
     --debug              Set to 'true' to test                                    ${params.debug}
     --species            Species: 'ce', 'ct' or 'cb'                              ${params.species}
-    --vcf                hard filtered vcf to calculate variant density           ${params.vcf}
+    --vcf                hard filtered vcf to calculate variant density           ${params.hard_filtered_vcf}
     --sample_sheet       Columns are strain, bam, bai without headers             ${params.sample_sheet}
     --bam_folder         (Optional) path to prefix the bam file. No end slash.    ${params.bam_folder}
     --output             (Optional) output folder name                            ${params.output}
@@ -94,15 +103,50 @@ if (params.help) {
 
 workflow { 
 
-    vcf.combine(vcf_index) | subset_iso_ref_strains
+    input_vcf.combine(input_vcf_index) | subset_iso_ref_strains
 
-    vcf.combine(vcf_index).concat(subset_iso_ref_strains.out.ref_strain_vcf) | build_tree
+    subset_iso_ref_strains.out
+      .combine(Channel.fromPath(params.csq_gff)) | bcsq_annotate_vcf
 
-    subset_iso_ref_strains.out.ref_strain_vcf.combine(contigs) | haplotype_sweep_IBD
+    bcsq_annotate_vcf.out
+      .combine(Channel.fromPath(params.AA_length))
+      .combine(Channel.fromPath(params.AA_score) | prep_other_annotation
+
+    bcsq_annotate_vcf.out  
+      .combine(prep_other_annotation.out)
+      .combine(Channel.fromPath(params.hard_filtered_vcfanno_config))
+      .combine(Channel.fromPath(params.dust_bed))
+      .combine(Channel.fromPath(params.dust_bed + ".tbi"))
+      .combine(Channel.fromPath(params.repeat_masker_bed))
+      .combine(Channel.fromPath(params.repeat_masker_bed + ".tbi")) | other_annotation_vcf
+
+/*
+    if (params.cendr == true) {
+
+      // Generate Strain-level TSV and VCFs. In 20200815 release this step was removed. but I'm keeping the code here in case having single-strain vcf or tsv helps with displaying annotation on cendr
+      // note 1: since annotation is only done for isotype-ref strains, here also only include isotype ref strains.
+      // note 2: this step used vcf with only bcsq annotation b/c I'm not sure how to split into single sample vcf with protein length and amino acid score. In single strains vcf, it may or may not contain the  
+      // Ryan has the code to split out single strain annotation for bcsq.
+      bcsq_annotate_vcf.out | strain_list
+      strain_set = strain_list.out.splitText( it.strip() )
+
+      strain_set.combine( bcsq_annotate_vcf.out.anno_vcf ) | generate_strain_tsv
+      
+
+      // Extract SNPeff severity tracks
+      mod_tracks = Channel.from(["LOW", "MODERATE", "HIGH", "MODIFIER"])
+      bcsq_annotate_vcf.out.anno_vcf.spread(mod_tracks) | generate_severity_tracks
+
+      }
+*/
+
+    vcf.combine(vcf_index).concat(subset_iso_ref_strains.out) | build_tree
+
+    subset_iso_ref_strains.out.combine(contigs) | haplotype_sweep_IBD
 
     haplotype_sweep_IBD.out.collect() | haplotype_sweep_plot
 
-    subset_iso_ref_strains.out.ref_strain_vcf.combine(sample_sheet) | count_variant_coverage
+    subset_iso_ref_strains.out.combine(sample_sheet) | count_variant_coverage
 
     count_variant_coverage.out.collect() | define_divergent_region
 
@@ -128,27 +172,202 @@ process subset_iso_ref_strains {
         tuple file(vcf), file(vcf_index)
 
     output: 
-        tuple file("*hard-filter.ref_strain.vcf.gz"), file("*hard-filter.ref_strain.vcf.gz.tbi"), emit: ref_strain_vcf
-        file("*.stats.txt")
+        tuple file("WI.isotype.vcf.gz"), file("WI.isotype.vcf.gz.tbi")
 
 
     """
 
     cut -f1 ${params.sample_sheet} > strain_list.txt
 
-    output_vcf=`echo ${vcf} | sed 's/hard-filter.vcf.gz/hard-filter.ref_strain.vcf.gz/'`
+    bcftools view -S strain_list.txt -O u ${vcf} | \\
+      bcftools view -O v --min-af 0.000001 --max-af 0.999999 | \\
+      vcffixup - | \\
+      bcftools view --threads 4 -O z > WI.isotype.vcf.gz
 
-    bcftools view -S strain_list.txt -O u ${vcf} | bcftools view -O v --min-af 0.000001 --max-af 0.999999 | vcffixup - | bcftools view --threads 4 -O z > \${output_vcf}
+    bcftools index WI.isotype.vcf.gz
 
-    bcftools index \${output_vcf}
-
-    bcftools index --tbi \${output_vcf}
-
-    bcftools stats -s- \${output_vcf} > \${output_vcf}.stats.txt
+    bcftools index --tbi WI.isotype.vcf.gz
 
     """
 
 }
+
+
+/* 
+    =========================
+    Annotate isotype-only vcf
+    =========================
+*/
+
+
+
+process bcsq_annotate_vcf {
+
+    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+
+    input:
+        tuple file(vcf), file(vcf_index), \
+              path("csq.gff.gz")
+
+
+    output:
+        tuple file("*hard-filter.ref_strain.vcf.gz"), file("*hard-filter.ref_strain.vcf.gz.tbi"), emit: anno_vcf
+        file("*.stats.txt")
+
+    script:
+    """
+        bcftools csq -O z --fasta-ref ${reference} \\
+                     --gff-annot csq.gff.gz \\
+                     --phase a $vcf > bcsq.vcf.gz
+
+        bcftools index --tbi bcsq.vcf.gz
+
+    """
+
+}
+
+
+process prep_other_annotation {
+
+    conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
+
+    input:
+        tuple tuple file(vcf), file(vcf_index), \
+              path("gff_AA_Length.tsv") \
+              path("AA_Scores.tsv")
+
+    output:
+        path("BCSQ_bed.bed")
+
+    """
+        bcftools query -e 'INFO/BCSQ="."' -f '%CHROM %POS %BCSQ\\n' $vcf > BCSQ.tsv
+
+        Rscript ${workflow.projecDir}/bin/Parse_and_Score.R gff_AA_Length.tsv AA_Scores.tsv BCSQ.tsv
+
+    """
+
+}
+
+
+process other_annotation_vcf {
+
+    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+
+    publishDir "${params.output}", mode: 'copy'
+
+    input:
+        tuple file(vcf), file(vcf_index), \
+              path("BCSQ_bed.bed"), \
+              path(vcfanno), \
+              path("dust.bed.gz"), \
+              path("dust.bed.gz.tbi"), \
+              path("repeat_masker.bed.gz"), \
+              path("repeat_masker.bed.gz.tbi")
+
+    output:
+        tuple file("*hard-filter.ref_strain.vcf.gz"), file("*hard-filter.ref_strain.vcf.gz.tbi")
+        file("*.stats.txt")
+
+
+    """
+        output_vcf=`basename ${params.hard_filtered_vcf} | sed 's/hard-filter.vcf.gz/hard-filter.ref_strain.vcf.gz/'`
+
+        vcfanno ${vcfanno} $vcf | bcftools view -O z > \${output_vcf}
+
+        bcftools index -tbi \${output_vcf}
+
+        bcftools stats -s- \${output_vcf} > \${output_vcf}.stats.txt
+
+    """
+}
+
+
+
+
+/* 
+    ==============================
+    Generate individual strain vcf. This is copied from wi-gatk in case it's needed for cendr browser.
+    ==============================
+*/
+
+/*
+process strain_list {
+
+    input:
+        tuple path(vcf), path(vcf_index)
+    
+    output:
+        file("samples.txt")
+
+    """
+        bcftools query --list-samples ${vcf} > samples.txt
+    """
+}
+
+
+process generate_strain_tsv {
+    // Generate a single TSV and VCF for every strain.
+
+    tag { strain }
+
+    publishDir "${params.output}/strain/tsv", mode: 'copy', pattern: "*.tsv.gz*"
+
+    input:
+        tuple val(strain), path(vcf), file(vcf_index)
+
+    output:
+        tuple path("${strain}.${date}.tsv.gz"),  path("${strain}.${date}.tsv.gz.tbi")
+
+    """
+        # Generate TSV
+        {
+            echo -e 'CHROM\\tPOS\\tREF\\tALT\\tFILTER\\tFT\\tGT';
+            bcftools query -f '[%CHROM\t%POS\t%REF\t%ALT\t%FILTER\t%FT\t%TGT]\n' --samples ${strain} ${vcf};
+        } | awk -F'\\t' -vOFS='\\t' '{ gsub("\\\\.", "PASS", \$6) ; print }' > ${strain}.${date}.tsv
+
+        bgzip ${strain}.${date}.tsv
+        tabix -S 1 -s 1 -b 2 -e 2 ${strain}.${date}.tsv.gz
+    """
+
+}
+*/
+
+
+
+/* 
+    ==========================================
+    Generate severity tracks for cendr browser
+    ==========================================
+*/
+
+
+process generate_severity_tracks {
+
+    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+
+    publishDir "${params.output}/tracks", mode: 'copy'
+
+    tag { severity }
+
+    input:
+        tuple path("in.vcf.gz"), path("in.vcf.gz.tbi"), val(severity)
+    output:
+        set file("${date}.${severity}.bed.gz"), file("${date}.${severity}.bed.gz.tbi")
+
+    """
+        bcftools view in.vcf.gz | \
+        grep -x -f ${workflow.projectDir}/bin/${severity}.txt | \
+        awk '\$0 !~ "^#" { print \$1 "\\t" (\$2 - 1) "\\t" (\$2)  "\\t" \$1 ":" \$2 "\\t0\\t+"  "\\t" \$2 - 1 "\\t" \$2 "\\t0\\t1\\t1\\t0" }' | \\
+        bgzip  > ${date}.${severity}.bed.gz
+        tabix -p bed ${date}.${severity}.bed.gz
+        fsize=\$(zcat ${date}.${severity}.bed.gz | wc -c)
+        if [ \${fsize} -lt 2000 ]; then
+            exit 1
+        fi;
+    """
+}
+
+
 
 /* 
     ==================
@@ -184,6 +403,8 @@ process build_tree {
     bioconvert phylip2stockholm \${output_phylip}
 
     quicktree -in a -out t \${output_stockholm} > \${output_tree}
+
+    mitochondria
 
 """
 
