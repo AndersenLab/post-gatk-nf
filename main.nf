@@ -11,10 +11,11 @@ nextflow.preview.dsl=2
 date = new Date().format( 'yyyyMMdd' )
 contigs = Channel.from("I","II","III","IV","V","X")
 params.species = ""
+params.cendr = false
 
 if (params.debug) {
 
-    params.hard_filtered_vcf = "${workflow.projectDir}/test_data/WI.20200811.hard-filter.vcf.gz"
+    params.hard_filtered_vcf = "${workflow.projectDir}/test_data/WI.20201230.hard-filter.vcf.gz"
     params.sample_sheet = "${workflow.projectDir}/test_data/sample_sheet.tsv"
     params.bin_bed = "${workflow.projectDir}/bin/bins_1kb_ce.bed"
     params.bam_folder = "${workflow.projectDir}/test_data/bam"
@@ -36,11 +37,16 @@ if (params.debug) {
 
 
 // Variant annotation files. The same for debug or normal run. 
-params.csq_gff = "${reference_dir}/csq/${species}.${project}.${ws_build}.csq.gff3.gz"
+
+// gff. below is the one DL made.
+// need to be replaced by Ryan reformatted csq.
+// "${params.reference_dir}/csq/${species}.${project}.${ws_build}.csq.gff3.gz" from DEC genomes-nf gives some error for transposons
+params.csq_gff = "/projects/b1059/data/genomes/c_elegans/WS276/c_elegans.PRJNA13758.WS276.annotations.CSQ.gff3" 
+
 params.AA_score = "${workflow.projectDir}/bin/AA_Scores.tsv"
 params.AA_length = "${workflow.projectDir}/bin/gff_AA_Length.tsv"
-params.dust_bed = "${reference_dir}/lcr/${species}.${project}.${ws_build}.dust.bed.gz"
-params.repeat_masker_bed = "${reference_dir}/lcr/${species}.${project}.${ws_build}.repeat_masker.bed.gz"
+params.dust_bed = "${params.reference_dir}/lcr/${params.species}.${params.project}.${params.ws_build}.dust.bed.gz"
+params.repeat_masker_bed = "${params.reference_dir}/lcr/${params.species}.${params.project}.${params.ws_build}.repeat_masker.bed.gz"
 params.hard_filtered_vcfanno_config = "${workflow.projectDir}/bin/vcfanno.toml"
 
 
@@ -80,7 +86,7 @@ nextflow main.nf -profile quest --vcf=hard-filtered.vcf --sample_sheet=sample_sh
     --debug              Set to 'true' to test                                    ${params.debug}
     --species            Species: 'ce', 'ct' or 'cb'                              ${params.species}
     --vcf                hard filtered vcf to calculate variant density           ${params.hard_filtered_vcf}
-    --sample_sheet       Columns are strain, bam, bai without headers             ${params.sample_sheet}
+    --sample_sheet       TSV with column iso-ref strain, bam, bai. no header      ${params.sample_sheet}
     --bam_folder         (Optional) path to prefix the bam file. No end slash.    ${params.bam_folder}
     --output             (Optional) output folder name                            ${params.output}
  
@@ -110,23 +116,23 @@ workflow {
 
     bcsq_annotate_vcf.out
       .combine(Channel.fromPath(params.AA_length))
-      .combine(Channel.fromPath(params.AA_score) | prep_other_annotation
-
-    bcsq_annotate_vcf.out  
-      .combine(prep_other_annotation.out)
-      .combine(Channel.fromPath(params.hard_filtered_vcfanno_config))
-      .combine(Channel.fromPath(params.dust_bed))
-      .combine(Channel.fromPath(params.dust_bed + ".tbi"))
-      .combine(Channel.fromPath(params.repeat_masker_bed))
-      .combine(Channel.fromPath(params.repeat_masker_bed + ".tbi")) | other_annotation_vcf
-
+      .combine(Channel.fromPath(params.AA_score)) | prep_other_annotation
+/*
+    bcsq_annotate_vcf.out
+      .concat(prep_other_annotation.out)
+      .concat(Channel.fromPath(params.hard_filtered_vcfanno_config))
+      .concat(Channel.fromPath(params.dust_bed))
+      .concat(Channel.fromPath(params.dust_bed + ".tbi"))
+      .concat(Channel.fromPath(params.repeat_masker_bed))
+      .concat(Channel.fromPath(params.repeat_masker_bed + ".tbi")).collect() | other_annotation_vcf
+*/
 /*
     if (params.cendr == true) {
 
       // Generate Strain-level TSV and VCFs. In 20200815 release this step was removed. but I'm keeping the code here in case having single-strain vcf or tsv helps with displaying annotation on cendr
       // note 1: since annotation is only done for isotype-ref strains, here also only include isotype ref strains.
-      // note 2: this step used vcf with only bcsq annotation b/c I'm not sure how to split into single sample vcf with protein length and amino acid score. In single strains vcf, it may or may not contain the  
-      // Ryan has the code to split out single strain annotation for bcsq.
+      // note 2: this step used vcf with only bcsq annotation b/c I'm not sure how to split into single sample vcf with protein length and amino acid score. Ryan has the code to split out single strain annotation for bcsq.
+      
       bcsq_annotate_vcf.out | strain_list
       strain_set = strain_list.out.splitText( it.strip() )
 
@@ -140,6 +146,7 @@ workflow {
       }
 */
 
+/*
     vcf.combine(vcf_index).concat(subset_iso_ref_strains.out) | build_tree
 
     subset_iso_ref_strains.out.combine(contigs) | haplotype_sweep_IBD
@@ -149,6 +156,7 @@ workflow {
     subset_iso_ref_strains.out.combine(sample_sheet) | count_variant_coverage
 
     count_variant_coverage.out.collect() | define_divergent_region
+*/
 
 }
 
@@ -206,17 +214,15 @@ process bcsq_annotate_vcf {
     conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
     input:
-        tuple file(vcf), file(vcf_index), \
-              path("csq.gff.gz")
+        tuple file(vcf), file(vcf_index), file("csq.gff.gz")
 
 
     output:
-        tuple file("*hard-filter.ref_strain.vcf.gz"), file("*hard-filter.ref_strain.vcf.gz.tbi"), emit: anno_vcf
-        file("*.stats.txt")
+        tuple file("bcsq.vcf.gz"), file("bcsq.vcf.gz.tbi")
 
     script:
     """
-        bcftools csq -O z --fasta-ref ${reference} \\
+        bcftools csq -O z --fasta-ref ${params.reference} \\
                      --gff-annot csq.gff.gz \\
                      --phase a $vcf > bcsq.vcf.gz
 
@@ -229,20 +235,17 @@ process bcsq_annotate_vcf {
 
 process prep_other_annotation {
 
-    conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
+  //  conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
+    echo true
 
     input:
-        tuple tuple file(vcf), file(vcf_index), \
-              path("gff_AA_Length.tsv") \
-              path("AA_Scores.tsv")
+        tuple path(vcf), path(vcf_index), path("gff_AA_Length.tsv"), path("AA_Scores.tsv")
 
     output:
         path("BCSQ_bed.bed")
 
     """
-        bcftools query -e 'INFO/BCSQ="."' -f '%CHROM %POS %BCSQ\\n' $vcf > BCSQ.tsv
-
-        Rscript ${workflow.projecDir}/bin/Parse_and_Score.R gff_AA_Length.tsv AA_Scores.tsv BCSQ.tsv
+      bcftools query -e 'INFO/BCSQ="."' -f '%CHROM %POS %BCSQ\\n' $vcf > BCSQ.tsv
 
     """
 
@@ -256,13 +259,7 @@ process other_annotation_vcf {
     publishDir "${params.output}", mode: 'copy'
 
     input:
-        tuple file(vcf), file(vcf_index), \
-              path("BCSQ_bed.bed"), \
-              path(vcfanno), \
-              path("dust.bed.gz"), \
-              path("dust.bed.gz.tbi"), \
-              path("repeat_masker.bed.gz"), \
-              path("repeat_masker.bed.gz.tbi")
+        tuple file(vcf), file(vcf_index), file("BCSQ_bed.bed"), file(vcfanno), file("dust.bed.gz"), file("dust.bed.gz.tbi"), file("repeat_masker.bed.gz"), file("repeat_masker.bed.gz.tbi")
 
     output:
         tuple file("*hard-filter.ref_strain.vcf.gz"), file("*hard-filter.ref_strain.vcf.gz.tbi")
@@ -306,7 +303,7 @@ process strain_list {
 
 
 process generate_strain_tsv {
-    // Generate a single TSV and VCF for every strain.
+    // Generate a single TSV for every strain.
 
     tag { strain }
 
