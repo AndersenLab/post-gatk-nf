@@ -10,14 +10,14 @@ nextflow.preview.dsl=2
 
 date = new Date().format( 'yyyyMMdd' )
 contigs = Channel.from("I","II","III","IV","V","X")
-params.species = ""
 params.cendr = false
+// 1kb bins for all chromosomes
+// params.species is defined in quest.config, and in order to match genome folder name, which uses c_elegans, the bin bed file also used c_elegans instead of ce
+params.bin_bed = "${workflow.projectDir}/bin/bins_1kb_${params.species}.bed"
 
 if (params.debug) {
-
     params.hard_filtered_vcf = "${workflow.projectDir}/test_data/WI.20201230.hard-filter.vcf.gz"
     params.sample_sheet = "${workflow.projectDir}/test_data/sample_sheet.tsv"
-    params.bin_bed = "${workflow.projectDir}/bin/bins_1kb_ce.bed"
     params.bam_folder = "${workflow.projectDir}/test_data/bam"
     params.output = "popgen-${date}-debug"
 
@@ -25,9 +25,6 @@ if (params.debug) {
     // Read input
     params.hard_filtered_vcf = ""
     params.sample_sheet = ""
-
-    // 1kb bins for all chromosomes
-    params.bin_bed = "${workflow.projectDir}/bin/bins_1kb_${params.species}.bed"
 
     // folder for the bam files. currently need to put all bam in the same folder
     params.bam_folder = ""
@@ -44,24 +41,10 @@ if (params.debug) {
 params.snpeff_vcfanno_config = "${workflow.projectDir}/bin/vcfanno_snpeff.toml"
 params.bcsq_vcfanno_config = "${workflow.projectDir}/bin/vcfanno.toml"
 
-
-if ( params.species==null ) error "Parameter --species is required, options are: ce, ct or cb."
+// Note that params.species is set in the config to be c_elegans (default)
 if ( params.hard_filtered_vcf==null ) error "Parameter --vcf is required. Specify path to the full vcf."
 if ( params.sample_sheet==null ) error "Parameter --sample_sheet is required. It should contain a column of strain names, a column of bam file names and a column of bai file names WITH NO HEADERS. If the bam and bai column do not contain full path to the files, specify that path with --bam_folder."
 
-
-// Read input
-input_vcf = Channel.fromPath("${params.hard_filtered_vcf}")
-input_vcf_index = Channel.fromPath("${params.hard_filtered_vcf}.tbi")
-
-// To convert ref strain to isotype names. Note only strains that match the first col will get changed, so won't impact ct and cb.
-isotype_convert_table = Channel.fromPath("${workflow.projectDir}/bin/ref_strain_isotype.tsv") 
-
-// Read sample sheet
-// No header. Columns are strain name, bam and bai
-sample_sheet = Channel.fromPath(params.sample_sheet)
-                       .splitCsv(sep: "\t")
-                      .map { row -> [ row[0], row[1] ]}
 
 
 def log_summary() {
@@ -83,7 +66,7 @@ nextflow main.nf -profile quest --vcf=hard-filtered.vcf --sample_sheet=sample_sh
     parameters           description                                              Set/Default
     ==========           ===========                                              ========================
     --debug              Set to 'true' to test                                    ${params.debug}
-    --species            Species: 'ce', 'ct' or 'cb'                              ${params.species}
+    --species            Species: 'c_elegans', 'ct' or 'cb'                       ${params.species}
     --vcf                hard filtered vcf to calculate variant density           ${params.hard_filtered_vcf}
     --sample_sheet       TSV with column iso-ref strain, bam, bai. no header      ${params.sample_sheet}
     --bam_folder         (Optional) path to prefix the bam file. No end slash.    ${params.bam_folder}
@@ -103,6 +86,20 @@ log.info(log_summary())
 if (params.help) {
     exit 1
 }
+
+
+// Read input
+input_vcf = Channel.fromPath("${params.hard_filtered_vcf}")
+input_vcf_index = Channel.fromPath("${params.hard_filtered_vcf}.tbi")
+
+// To convert ref strain to isotype names. Note only strains that match the first col will get changed, so won't impact ct and cb.
+isotype_convert_table = Channel.fromPath("${workflow.projectDir}/bin/ref_strain_isotype.tsv") 
+
+// Read sample sheet
+// No header. Columns are strain name, bam and bai
+sample_sheet = Channel.fromPath(params.sample_sheet)
+                       .splitCsv(sep: "\t")
+                      .map { row -> [ row[0], row[1] ]}
 
 
 
@@ -146,26 +143,32 @@ workflow {
       strain_set = strain_list.out.splitText( it.strip() )
 
       strain_set.combine( bcsq_annotate_vcf.out.anno_vcf ) | generate_strain_tsv
-      
+      */
 
-      // Extract SNPeff severity tracks
-      mod_tracks = Channel.from(["LOW", "MODERATE", "HIGH", "MODIFIER"])
-      bcsq_annotate_vcf.out.anno_vcf.spread(mod_tracks) | generate_severity_tracks
+      // Extract severity tracks
+      mod_tracks = Channel.from(["LOW", "MODERATE", "HIGH", "MODIFIER"])  
 
-      }
-*/
+      snpeff_annotate_vcf.out.snpeff_vcf.spread(mod_tracks) | snpeff_severity_tracks
+
+      // bcsq_annotate_vcf.out.bcsq_vcf.spread(mod_tracks) | snpeff_severity_tracks
+      // }
+
 
 
     input_vcf.combine(input_vcf_index).concat(subset_iso_ref_strains.out) | build_tree
 
     subset_iso_ref_strains.out.combine(contigs) | haplotype_sweep_IBD
 
-    haplotype_sweep_IBD.out.collect() | haplotype_sweep_plot
+    // haplotype_sweep_plot and define_divergent_region always give error during debugging run prob b/c the debug dataset is too small. so turn it off when debugging
+    if (!params.debug) {
+      haplotype_sweep_IBD.out.collect() | haplotype_sweep_plot
+    }
 
-    subset_iso_ref_strains.out.combine(sample_sheet) | count_variant_coverage
+    subset_iso_ref_strains.out.combine(sample_sheet).combine(isotype_convert_table) | count_variant_coverage
 
-    count_variant_coverage.out.collect() | define_divergent_region
-
+    if (!params.debug) {
+      count_variant_coverage.out.collect() | define_divergent_region
+    }
 
 }
 
@@ -204,9 +207,16 @@ process subset_iso_ref_strains {
     bcftools index WI.ref_strain.vcf.gz
     bcftools index --tbi WI.ref_strain.vcf.gz
 
-    # convert to isotype names
-    bcftools reheader -s ref_strain_isotype.tsv WI.ref_strain.vcf.gz | bcftools view -O z > \${output}
-    bcftools index --tbi \${output}
+    # If c.e., convert to isotype names
+    if [ ${params.species} = "c_elegans" ]
+    then
+        bcftools reheader -s ref_strain_isotype.tsv WI.ref_strain.vcf.gz | bcftools view -O z > \${output}
+        bcftools index --tbi \${output}
+    else
+        mv WI.ref_strain.vcf.gz \${output}
+        mv WI.ref_strain.vcf.gz.tbi \${output}.tbi
+    fi
+
     """
 
 }
@@ -234,7 +244,8 @@ process snpeff_annotate_vcf {
               path("repeat_masker.bed.gz.tbi")
 
     output:
-        tuple path("*.snpeff.vcf.gz"), path("*.snpeff.vcf.gz.tbi"), path("snpeff.stats.csv")
+        tuple path("*.snpeff.vcf.gz"), path("*.snpeff.vcf.gz.tbi"), emit: snpeff_vcf
+        path "snpeff.stats.csv"
 
 
     script:
@@ -396,7 +407,43 @@ process generate_strain_tsv {
 */
 
 
-process generate_severity_tracks {
+process snpeff_severity_tracks {
+    /*
+        The severity tracks are bedfiles with annotations for
+        LOW
+        MODERATE
+        HIGH
+        MODIFIER
+        variants as annotated with SNPEff
+        They are used on the CeNDR browser. Previous CeNDR browser used soft filtered vcf, this one uses hard filtered vcf
+    */
+
+    publishDir "${params.output}/tracks", mode: 'copy'
+
+    tag { severity }
+
+    input:
+        tuple path("in.vcf.gz"), path("in.vcf.gz.csi"), val(severity)
+    output:
+        set file("${date}.${severity}.bed.gz"), file("${date}.${severity}.bed.gz.tbi")
+
+    """
+        bcftools view --apply-filters PASS in.vcf.gz | \
+        grep ${severity} | \
+        awk '\$0 !~ "^#" { print \$1 "\\t" (\$2 - 1) "\\t" (\$2)  "\\t" \$1 ":" \$2 "\\t0\\t+"  "\\t" \$2 - 1 "\\t" \$2 "\\t0\\t1\\t1\\t0" }' | \\
+        bgzip  > ${date}.${severity}.bed.gz
+        tabix -p bed ${date}.${severity}.bed.gz
+        fsize=\$(zcat ${date}.${severity}.bed.gz | wc -c)
+        if [ \${fsize} -lt 2000 ]; then
+            exit 1
+        fi;
+    """
+}
+
+
+/* bcsq version is untested but should work. BCSQ doesn't label consequence as LOW, MODERATE, HIGH etc, Ryan is compiling a list that will match BCSQ label to Snpeff label, so we can still have a LOW track, a MODERATE track etc.
+
+process bcsq_severity_tracks {
 
     conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
@@ -421,6 +468,8 @@ process generate_severity_tracks {
         fi;
     """
 }
+
+
 
 
 
@@ -532,24 +581,35 @@ process count_variant_coverage {
     publishDir "${params.output}/divergent_regions/Mask_DF", mode: 'copy'
 
     input:
-        tuple path(vcf), path(index), val(strain), val(bam)
+        tuple path(vcf), path(index), val(strain), val(bam), path("ref_strain_isotype.tsv")
 
     output:
         file("*_Mask_DF.tsv")
 
     """
+    # if c.e and the strain is one of those that isotype name differs from strain name, convert isotype ref strain name to isotype name
+    if [ ${params.species} = "c_elegans" ] && grep -q ${strain} ref_strain_isotype.tsv
+    then
+        ref_iso_pair=`grep ${strain} ref_strain_isotype.tsv`
+        ref_iso_pair_array=(\$ref_iso_pair)
+        ref_strain_name=\${ref_iso_pair_array[0]}
+        iso_name=\${ref_iso_pair_array[1]}
+        isotype_name=`echo ${strain} | sed "s/\$ref_strain_name/\$iso_name/"`
+    else
+        isotype_name=${strain}
+    fi
 
-    bcftools view -s ${strain} ${vcf} | bcftools filter -i 'GT="alt"' -Ov | \\
+    bcftools view -s \${isotype_name} ${vcf} | bcftools filter -i 'GT="alt"' -Ov | \\
 
-    bedtools coverage -a ${params.bin_bed} -b stdin -counts > ${strain}_variant_counts.txt
+    bedtools coverage -a ${params.bin_bed} -b stdin -counts > \${isotype_name}_variant_counts.txt
 
-    mosdepth -b ${params.bin_bed} ${strain} ${params.bam_folder}/${bam}
+    mosdepth -b ${params.bin_bed} \${isotype_name} ${params.bam_folder}/${bam}
 
-    gunzip ${strain}.regions.bed.gz
+    gunzip \${isotype_name}.regions.bed.gz
 
-    echo 'CHROM\tSTART_BIN\tEND_BIN\tVAR_COUNT\tCOVERAGE' > ${strain}_Mask_DF.tsv
+    echo 'CHROM\tSTART_BIN\tEND_BIN\tVAR_COUNT\tCOVERAGE' > \${isotype_name}_Mask_DF.tsv
 
-    paste ${strain}_variant_counts.txt ${strain}.regions.bed | cut -f 1-4,8 >> ${strain}_Mask_DF.tsv
+    paste \${isotype_name}_variant_counts.txt \${isotype_name}.regions.bed | cut -f 1-4,8 >> \${isotype_name}_Mask_DF.tsv
 
     """
 }
