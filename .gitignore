@@ -1,0 +1,5 @@
+.nextflow.log*
+pipeline_info/*
+popgen-*
+202*
+.nextflow/*

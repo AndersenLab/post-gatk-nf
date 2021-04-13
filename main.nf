@@ -16,7 +16,7 @@ params.cendr = false
 params.bin_bed = "${workflow.projectDir}/bin/bins_1kb_${params.species}.bed"
 
 if (params.debug) {
-    params.hard_filtered_vcf = "${workflow.projectDir}/test_data/WI.20201230.hard-filter.vcf.gz"
+    params.vcf = "${workflow.projectDir}/test_data/WI.20201230.hard-filter.vcf.gz"
     params.sample_sheet = "${workflow.projectDir}/test_data/sample_sheet.tsv"
     params.bam_folder = "${workflow.projectDir}/test_data/bam"
     params.output = "popgen-${date}-debug"
@@ -166,9 +166,9 @@ workflow {
 
     subset_iso_ref_strains.out.combine(sample_sheet).combine(isotype_convert_table) | count_variant_coverage
 
-    if (!params.debug) {
-      count_variant_coverage.out.collect() | define_divergent_region
-    }
+    //if (!params.debug) {
+     // count_variant_coverage.out.collect() | define_divergent_region
+    //}
 
 }
 
@@ -275,6 +275,8 @@ process bcsq_annotate_vcf {
 
     conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
+    memory 16.GB
+
     input:
         tuple file(vcf), file(vcf_index), file(gff)
 
@@ -285,7 +287,8 @@ process bcsq_annotate_vcf {
 
     script:
     """
-        gzip -dc $gff | grep -v 'transposon' | bgzip > csq.gff.gz
+        # gzip -dc $gff | grep -v 'transposon' | bgzip > csq.gff.gz
+        bgzip -c $gff > csq.gff.gz
         tabix -p gff csq.gff.gz
 
         bcftools csq -O z --fasta-ref ${params.reference} \\
@@ -615,7 +618,7 @@ process count_variant_coverage {
 }
 
 
-
+/*
 
 process define_divergent_region {
 
@@ -623,7 +626,7 @@ process define_divergent_region {
 
     publishDir "${params.output}/divergent_regions", mode: 'copy'
 
-    memory { 30.GB + 10.GB * task.attempt }
+    memory { 128.GB + 20.GB * task.attempt }
     errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
 
     input:
@@ -633,8 +636,16 @@ process define_divergent_region {
         file("divergent_regions_strain.bed")
 
     """
-    cp ${workflow.projectDir}/bin/reoptimzied_divergent_region_characterization.Rmd reoptimzied_divergent_region_characterization.Rmd
+    # cp ${workflow.projectDir}/bin/reoptimzied_divergent_region_characterization.Rmd reoptimzied_divergent_region_characterization.Rmd
+    # Rscript -e "rmarkdown::render('reoptimzied_divergent_region_characterization.Rmd')"
 
-    Rscript -e "rmarkdown::render('reoptimzied_divergent_region_characterization.Rmd')"
+    cp ${workflow.projectDir}/bin/divergent_regions_notmarkdown.R divergent_regions_notmarkdown.R
+    cp ${workflow.projectDir}/bin/divergent_regions_input.R divergent_regions_input.R
+
+    Rscript --vanilla divergent_regions_input.R
+    Rscript --vanilla divergent_regions_notmarkdown.R
+
     """
 }
+
+*/

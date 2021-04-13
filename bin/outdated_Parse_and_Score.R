@@ -1,25 +1,30 @@
-#Libraries
 library(dplyr)
 library(tidyr)
 library(readr)
+library(splitstackshape)
 library(stringr)
 
 #Read-in input files
 args <- commandArgs(trailingOnly = T)
 
 #Read-in Extracted Table Files
-BCSQ <- read.table(args[1], quote="\"", comment.char="", stringsAsFactors = FALSE)
+BCSQ <- read.table(args[1], quote="\"", comment.char="")
 
 
 #Parse Files
-parse_VCF <- function(df){
-  parsed <- df %>% 
-    dplyr::rename("CHROM" = "V1", "POS" = "V2", "ANNOTATION" = "V3") %>%
-    tidyr::separate_rows(ANNOTATION, sep=",")%>%
-    tidyr::separate("ANNOTATION", into = c("CONSEQUENCE", "GENE", "TRANSCRIPT", "BIOTYPE", "STRAND", "AMINO_ACID_CHANGE", "DNA_CHANGE"), sep = "\\|") 
+parse_BCSQ <- function(df){
+  parsed <- df %>% dplyr::rename("CHROM" = "V1", "POS" = "V2", "ANNOTATION" = "V3") %>% #Separate CHROM, POS, ANNOTATION
+    splitstackshape::cSplit("ANNOTATION", sep = ",", direction = "wide") #Separate Transcripts
+  renamecols <- function(x){colnames(x) <- gsub("ANNOTATION", "SCRIPT", colnames(x)); x}
+  pivot <- renamecols(parsed) %>%
+    tidyr::pivot_longer(cols = starts_with("SCRIPT"), names_to = "TRANSCRIPT", values_to = "ANNOTATION") %>% na.omit() %>%
+    tidyr::separate("ANNOTATION", into = c("CONSEQUENCE", "GENE", "TRANSCRIPT", "BIOTYPE", "STRAND", "AMINO_ACID_CHANGE", "DNA_CHANGE"), sep = "\\|")%>%
+    as_tibble()
+  
+  return(pivot)
 }
 
-parsed_BCSQ <- parse_VCF(BCSQ)
+parsed_BCSQ <- parse_BCSQ(BCSQ)
 
 
 #Clean Table
@@ -37,12 +42,7 @@ BCSQ_p_translate <- function(df){ #Fails for AA changes that go more than one po
 
 clean_BCSQ <- BCSQ_p_translate(BCSQ_con_clean)
 
-write.csv(clean_BCSQ, "clean_BCSQ.csv") #Write out clean BCSQ
-
 #Adding BLOSUM and Grantham Scores
-
-clean_BCSQ <- readr::read_csv("clean_BCSQ.csv") #Read in clean BCSQ
-
 AA_Scores <- readr::read_tsv(args[2]) #read in Amino Acid scores
 
 clean_BCSQ <- dplyr::left_join(clean_BCSQ, AA_Scores, by = "REF_ALT_AA")
@@ -56,15 +56,10 @@ gff_AA_Length <- readr::read_tsv(args[3]) #read in transcript AA lengths from th
 clean_BCSQ <- dplyr::left_join(clean_BCSQ, gff_AA_Length, by = "TRANSCRIPT")
 
 scored_BCSQ <- clean_BCSQ %>%
-  dplyr::mutate("PerProtein" = (AA_POS/AA_Length)*100) %>%
+  dplyr::mutate("PerProtein" = (as.numeric(AA_POS)/as.numeric(AA_Length))*100) %>%
   dplyr::mutate_if(is.numeric, round, digits=2) #Round percent protein to 2 decimal places.
 
-write.csv(scored_BCSQ, "scored_BCSQ.csv") #Write out for analysis
-
 #Creating BED File to Annotate VCF
-
-scored_BCSQ <- readr::read_csv("scored_BCSQ.csv")
-
 prebed_BCSQ <- scored_BCSQ %>%
   dplyr::mutate("chromStart"=POS-1)
 
