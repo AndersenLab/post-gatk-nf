@@ -287,7 +287,6 @@ process bcsq_annotate_vcf {
 
     script:
     """
-        # gzip -dc $gff | grep -v 'transposon' | bgzip > csq.gff.gz
         bgzip -c $gff > csq.gff.gz
         tabix -p gff csq.gff.gz
 
@@ -359,7 +358,7 @@ process AA_annotate_vcf {
     ==============================
 */
 
-/*
+
 process strain_list {
 
     input:
@@ -372,6 +371,30 @@ process strain_list {
         bcftools query --list-samples ${vcf} > samples.txt
     """
 }
+
+process generate_strain_vcf {
+    // Generate a single VCF for every strain.
+
+    tag { strain }
+
+    publishDir "${params.output}/strain/vcf", mode: 'copy', pattern: "*.vcf.gz*"
+
+    input:
+        tuple val(strain), path(vcf), file(vcf_index)
+
+    output:
+        tuple path("${strain}.${date}.vcf.gz"),  path("${strain}.${date}.vcf.gz.tbi"), path("${strain}.${date}.vcf.gz.csi")
+
+    """
+        bcftools query --samples ${stain} ${vcf} > ${strain}.${date}.vcf
+        bgzip ${strain}.${date}.vcf
+        bcftools index -c ${strain}.${date}.vcf.gz
+        bcftools index -t ${strain}.${date}.vcf.gz
+
+    """
+
+}
+
 
 
 process generate_strain_tsv {
@@ -399,7 +422,7 @@ process generate_strain_tsv {
     """
 
 }
-*/
+
 
 
 
