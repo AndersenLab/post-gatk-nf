@@ -23,11 +23,11 @@ if (params.debug) {
 
 } else {
     // Read input
-    params.hard_filtered_vcf = ""
+    params.vcf = ""
     params.sample_sheet = ""
 
     // folder for the bam files. currently need to put all bam in the same folder
-    params.bam_folder = ""
+    params.bam_folder = "/projects/b1059/data/${species}/WI/alignments/"
 
     params.output = "popgen-${date}"
 }
@@ -35,14 +35,12 @@ if (params.debug) {
 
 // Variant annotation files. The same for debug or normal run. 
 
-// gff. below is the one DL made.
-// need to be replaced by Ryan reformatted csq.
 // "${params.reference_dir}/csq/${species}.${project}.${ws_build}.csq.gff3.gz" from DEC genomes-nf gives some error for transposons
 params.snpeff_vcfanno_config = "${workflow.projectDir}/bin/vcfanno_snpeff.toml"
 params.bcsq_vcfanno_config = "${workflow.projectDir}/bin/vcfanno.toml"
 
 // Note that params.species is set in the config to be c_elegans (default)
-if ( params.hard_filtered_vcf==null ) error "Parameter --vcf is required. Specify path to the full vcf."
+if ( params.vcf==null ) error "Parameter --vcf is required. Specify path to the full vcf."
 if ( params.sample_sheet==null ) error "Parameter --sample_sheet is required. It should contain a column of strain names, a column of bam file names and a column of bai file names WITH NO HEADERS. If the bam and bai column do not contain full path to the files, specify that path with --bam_folder."
 
 
@@ -61,16 +59,16 @@ Should work for c.e, c.b, c.t since they all have the same number of chromosomes
 
 nextflow main.nf -profile quest --debug=true
 
-nextflow main.nf -profile quest --vcf=hard-filtered.vcf --sample_sheet=sample_sheet.tsv --bam_folder=/path/bam_folder --species=ce 
+nextflow main.nf -profile quest --vcf=hard-filtered.vcf --sample_sheet=sample_sheet.tsv --bam_folder=/path/bam_folder --species=c_elegans 
 
     parameters           description                                              Set/Default
     ==========           ===========                                              ========================
     --debug              Set to 'true' to test                                    ${params.debug}
-    --species            Species: 'c_elegans', 'ct' or 'cb'                       ${params.species}
-    --vcf                hard filtered vcf to calculate variant density           ${params.hard_filtered_vcf}
+    --species            Species: 'c_elegans', 'c_tropicalis' or 'c_briggsae'     ${params.species}
+    --vcf                hard filtered vcf to calculate variant density           ${params.vcf}
     --sample_sheet       TSV with column iso-ref strain, bam, bai. no header      ${params.sample_sheet}
-    --bam_folder         (Optional) path to prefix the bam file. No end slash.    ${params.bam_folder}
     --output             (Optional) output folder name                            ${params.output}
+    --cendr              Option to create strain-specific vcf for CeNDR           ${params.cendr}
  
     username                                                                      ${"whoami".execute().in.text}
 
@@ -89,8 +87,8 @@ if (params.help) {
 
 
 // Read input
-input_vcf = Channel.fromPath("${params.hard_filtered_vcf}")
-input_vcf_index = Channel.fromPath("${params.hard_filtered_vcf}.tbi")
+input_vcf = Channel.fromPath("${params.vcf}")
+input_vcf_index = Channel.fromPath("${params.vcf}.tbi")
 
 // To convert ref strain to isotype names. Note only strains that match the first col will get changed, so won't impact ct and cb.
 isotype_convert_table = Channel.fromPath("${workflow.projectDir}/bin/ref_strain_isotype.tsv") 
@@ -131,19 +129,19 @@ workflow {
       .combine(Channel.fromPath(params.repeat_masker_bed))
       .combine(Channel.fromPath(params.repeat_masker_bed + ".tbi")) | AA_annotate_vcf
 
-/*
+
     if (params.cendr == true) {
 
-      /*
-      // Generate Strain-level TSV and VCFs. In 20200815 release this step was removed. but I'm keeping the code here in case having single-strain vcf or tsv helps with displaying annotation on cendr
+      
+      // Generate Strain-level TSV and VCFs. 
       // note 1: since annotation is only done for isotype-ref strains, here also only include isotype ref strains.
       // note 2: this step used vcf with only bcsq annotation b/c I'm not sure how to split into single sample vcf with protein length and amino acid score. Ryan has the code to split out single strain annotation for bcsq.
       
-      bcsq_annotate_vcf.out | strain_list
-      strain_set = strain_list.out.splitText( it.strip() )
+      // bcsq_annotate_vcf.out | strain_list
+      // strain_set = strain_list.out.splitText( it.strip() )
 
-      strain_set.combine( bcsq_annotate_vcf.out.anno_vcf ) | generate_strain_tsv
-      */
+      // strain_set.combine( bcsq_annotate_vcf.out.anno_vcf ) | generate_strain_tsv
+      
 
       // Extract severity tracks
       mod_tracks = Channel.from(["LOW", "MODERATE", "HIGH", "MODIFIER"])  
@@ -151,7 +149,7 @@ workflow {
       snpeff_annotate_vcf.out.snpeff_vcf.spread(mod_tracks) | snpeff_severity_tracks
 
       // bcsq_annotate_vcf.out.bcsq_vcf.spread(mod_tracks) | snpeff_severity_tracks
-      // }
+    }
 
 
 
@@ -287,7 +285,8 @@ process bcsq_annotate_vcf {
 
     script:
     """
-        bgzip -c $gff > csq.gff.gz
+        # bgzip -c $gff > csq.gff.gz
+        cp $gff csq.gff.gz
         tabix -p gff csq.gff.gz
 
         bcftools csq -O z --fasta-ref ${params.reference} \\
@@ -335,7 +334,7 @@ process AA_annotate_vcf {
 
 
     """
-        output_vcf=`basename ${params.hard_filtered_vcf} | sed 's/hard-filter.vcf.gz/hard-filter.ref_strain.vcf.gz/'`
+        output_vcf=`basename ${params.vcf} | sed 's/hard-filter.vcf.gz/hard-filter.ref_strain.vcf.gz/'`
 
         bgzip BCSQ_bed.bed
         tabix BCSQ_bed.bed.gz
@@ -354,7 +353,7 @@ process AA_annotate_vcf {
 
 /* 
     ==============================
-    Generate individual strain vcf. This is copied from wi-gatk in case it's needed for cendr browser.
+    Generate individual strain vcf.
     ==============================
 */
 
@@ -396,7 +395,7 @@ process generate_strain_vcf {
 }
 
 
-
+/*
 process generate_strain_tsv {
     // Generate a single TSV for every strain.
 
@@ -422,7 +421,7 @@ process generate_strain_tsv {
     """
 
 }
-
+*/
 
 
 
@@ -641,7 +640,7 @@ process count_variant_coverage {
 }
 
 
-/*
+
 
 process define_divergent_region {
 
@@ -659,16 +658,10 @@ process define_divergent_region {
         file("divergent_regions_strain.bed")
 
     """
-    # cp ${workflow.projectDir}/bin/reoptimzied_divergent_region_characterization.Rmd reoptimzied_divergent_region_characterization.Rmd
-    # Rscript -e "rmarkdown::render('reoptimzied_divergent_region_characterization.Rmd')"
-
-    cp ${workflow.projectDir}/bin/divergent_regions_notmarkdown.R divergent_regions_notmarkdown.R
-    cp ${workflow.projectDir}/bin/divergent_regions_input.R divergent_regions_input.R
-
-    Rscript --vanilla divergent_regions_input.R
-    Rscript --vanilla divergent_regions_notmarkdown.R
+    cp ${workflow.projectDir}/bin/reoptimzied_divergent_region_characterization.Rmd reoptimzied_divergent_region_characterization.Rmd
+    Rscript -e "rmarkdown::render('reoptimzied_divergent_region_characterization.Rmd')"
 
     """
 }
 
-*/
+
