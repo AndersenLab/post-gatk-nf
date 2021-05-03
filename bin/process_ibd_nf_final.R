@@ -328,9 +328,8 @@ ggplot(plot_df,
     facet_grid(.~chromosome, scales="free", space="free") +
     theme(legend.position="none")
 
-ggsave(paste("max_haplotype_genome_wide.pdf"),
-       width = 14,
-       height = 28)
+ggsave(paste("~/Dropbox/AndersenLab/CeNDR/Data_processing/20210121/6b.haplotype/max_haplotype_genome_wide.pdf"),
+       height = 70, width = 35, limitsize = FALSE)
 
 #===============#
 # Sweep summary #
@@ -366,15 +365,23 @@ hap_share <- sweep_summary %>%
     tidyr::spread(chromosome, max_haplotype_shared) %>%
     dplyr::rename_at(.vars=vars(-isotype), funs(suffix))
 
-sweep_summary %>%
-    dplyr::select(-max_haplotype_shared) %>%
-    tidyr::spread(chromosome, is_swept) %>%
-#    dplyr::mutate(II = F, III = F) %>%
-    dplyr::left_join(hap_share) %>%
-    dplyr::rowwise() %>%
-#    dplyr::mutate(swept_chroms = sum(I, IV, V, X)) %>%
-    dplyr::select("isotype", "I_hapshare", "II_hapshare", "III_hapshare", "IV_hapshare", "V_hapshare", "X_hapshare") %>% 
-    readr::write_tsv("sweep_summary.tsv")
+#sweep_summary %>%
+#    dplyr::select(-max_haplotype_shared) %>%
+#    tidyr::spread(chromosome, is_swept) %>%
+##    dplyr::mutate(II = F, III = F) %>%
+#    dplyr::left_join(hap_share) %>%
+#    dplyr::rowwise() %>%
+##    dplyr::mutate(swept_chroms = sum(I, IV, V, X)) %>%
+#    dplyr::select("isotype", "I_hapshare", "II_hapshare", "III_hapshare", "IV_hapshare", "V_hapshare", "X_hapshare") %>% 
+#    readr::write_tsv("sweep_summary.tsv")
+
+# change with updated code from gaotian
+swept_chr <- plot_df %>%
+    dplyr::select(swept_region=chromosome, isotype, swept_ratio=filtered_sweep_ratio) %>% 
+    dplyr::ungroup() %>%
+    dplyr::distinct() %>% 
+    tidyr::spread(swept_region,swept_ratio)
+write.table(swept_chr, paste("sweep_summary.tsv",sep = ""), sep = "\t", row.names = F, quote = FALSE)
 
 
 #===================================#
