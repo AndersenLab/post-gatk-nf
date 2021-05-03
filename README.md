@@ -28,6 +28,6 @@ nextflow main.nf --vcf path_to_vcf.vcf.gz --sample_sheet path_to_sample_sheet.ts
 
 ### Overview
 
-![Overview of post-gatk-nf](http://github.com/andersenlab/post-gatk-nf/img/post-gatk-nf-flow.png)
+![Overview of post-gatk-nf](https://github.com/AndersenLab/post-gatk-nf/blob/main/img/post-gatk-nf-flow.png?raw=true)
 
 
