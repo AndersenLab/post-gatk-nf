@@ -14,6 +14,7 @@ params.cendr = false
 // 1kb bins for all chromosomes
 // params.species is defined in quest.config, and in order to match genome folder name, which uses c_elegans, the bin bed file also used c_elegans instead of ce
 params.bin_bed = "${workflow.projectDir}/bin/bins_1kb_${params.species}.bed"
+params.ncsq_param = 224
 
 if (params.debug) {
     params.vcf = "${workflow.projectDir}/test_data/WI.20201230.hard-filter.vcf.gz"
@@ -61,7 +62,7 @@ Should work for c.e, c.b, c.t since they all have the same number of chromosomes
      *       *                * * * * *     *        *  *     *      *       *  *                         * *
     *        *                   **         *           *     *      *       * *                         * *
    *        *   * * * * * *      **    ***  *           * * * *      *       * *      ***      *          *
-  * * * * *    *   * *   *  *     **         *    * * *  *     *      *       *  *             * * *      *
+  * * * * *    *   * *   *  *    **         *    * * *  *     *      *       *  *             * * *      *
  *            *     *   *   *   *  *        *        *  *     *      *       *   *           *     *    *   *
 *              * * *   * * * * *    *        * * * * *  *     *      *       *    *         *      * * * * *  
                                                                                                       **
@@ -113,10 +114,15 @@ sample_sheet = Channel.fromPath(params.sample_sheet)
                       .map { row -> [ row[0], row[1] ]}
 
 
-
 workflow { 
 
     input_vcf.combine(input_vcf_index).combine(isotype_convert_table) | subset_iso_ref_strains
+
+    // impute vcf
+    subset_iso_ref_strains.out | subset_snv
+    contigs.combine(subset_snv.out) | imputation
+    imputation.out 
+        .toSortedList() | concat_imputed
 
     // snpeff annotation
     subset_iso_ref_strains.out
@@ -144,30 +150,28 @@ workflow {
 
 
     if (params.cendr == true) {
-
       
       // Generate Strain-level TSV and VCFs. 
       // note 1: since annotation is only done for isotype-ref strains, here also only include isotype ref strains.
       // note 2: this step used vcf with only bcsq annotation b/c I'm not sure how to split into single sample vcf with protein length and amino acid score. Ryan has the code to split out single strain annotation for bcsq.
       
-      // bcsq_annotate_vcf.out | strain_list
-      // strain_set = strain_list.out.splitText( it.strip() )
+      bcsq_annotate_vcf.out | strain_list
+      strain_set = strain_list.out.splitText( it.strip() )
 
-      // strain_set.combine( bcsq_annotate_vcf.out.anno_vcf ) | generate_strain_tsv
+      strain_set.combine( bcsq_annotate_vcf.out.anno_vcf ) | generate_strain_vcf
       
-
       // Extract severity tracks
       mod_tracks = Channel.from(["LOW", "MODERATE", "HIGH", "MODIFIER"])  
 
       snpeff_annotate_vcf.out.snpeff_vcf.spread(mod_tracks) | snpeff_severity_tracks
-
       // bcsq_annotate_vcf.out.bcsq_vcf.spread(mod_tracks) | snpeff_severity_tracks
+
     }
 
-
-
+    // build tryy
     input_vcf.combine(input_vcf_index).concat(subset_iso_ref_strains.out) | build_tree
 
+    // haplotype
     subset_iso_ref_strains.out.combine(contigs) | haplotype_sweep_IBD
 
     // haplotype_sweep_plot and define_divergent_region always give error during debugging run prob b/c the debug dataset is too small. so turn it off when debugging
@@ -177,9 +181,9 @@ workflow {
 
     subset_iso_ref_strains.out.combine(sample_sheet).combine(isotype_convert_table) | count_variant_coverage
 
-    //if (!params.debug) {
-     // count_variant_coverage.out.collect() | define_divergent_region
-    //}
+    if (!params.debug) {
+     count_variant_coverage.out.collect() | define_divergent_region
+    }
 
 }
 
@@ -197,7 +201,7 @@ process subset_iso_ref_strains {
     memory 16.GB
     cpus 4
 
-    publishDir "${params.output}", mode: 'copy'
+    publishDir "${params.output}/variation", mode: 'copy'
 
     input: 
         tuple file(vcf), file(vcf_index), file("ref_strain_isotype.tsv")
@@ -211,7 +215,7 @@ process subset_iso_ref_strains {
     cut -f1 ${params.sample_sheet} > strain_list.txt
 
     bcftools view -S strain_list.txt -O u ${vcf} | \\
-      bcftools view -O v --min-af 0.000001 --max-af 0.999999 | \\ # these two lines should be swapped?
+      bcftools view -O v --min-af 0.000001 --max-af 0.999999 | \\
       vcffixup - | \\
       bcftools view --threads ${task.cpus} -O z > WI.ref_strain.vcf.gz
 
@@ -232,6 +236,88 @@ process subset_iso_ref_strains {
 
 }
 
+/*==============================================
+~ ~ ~ > *   Impute hard filter VCF     * < ~ ~ ~
+==============================================*/
+
+process subset_snv {
+
+    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+
+    input:
+        tuple file(hardvcf), file(hardvcf_index)
+
+    output:
+        file("WI.${date}.hard-filter.isotype.SNV.vcf.gz")
+
+    """
+    bcftools view -O u ${hardvcf} | \
+    bcftools view -O v --types snps --min-af 0.000001 --max-af 0.999999 | \
+    vcffixup - | \
+    bcftools view --threads=3 -O z > WI.${date}.hard-filter.isotype.SNV.vcf.gz
+
+    """
+
+}
+
+process imputation { 
+
+    errorStrategy 'ignore'
+
+    tag {CHROM} 
+    cpus params.cores 
+
+    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+
+    input:
+        tuple val(CHROM), file(hardvcf)
+
+    output:
+        tuple val(CHROM), file("${CHROM}.b5.vcf.gz"), file("${CHROM}.b5.vcf.gz.csi")
+
+    """
+
+    if [ ${CHROM} == "X" ]
+    then
+        beagle -Xmx98g chrom=${CHROM} window=3 overlap=1 impute=true ne=100000 nthreads=3 imp-segment=0.5 imp-step=0.01 cluster=0.0005 gt=${hardvcf} map=${workflow.projectDir}/bin/chr${CHROM}.map out=${CHROM}.b5
+    else
+        beagle -Xmx98g chrom=${CHROM} window=10 overlap=2 impute=true ne=100000 nthreads=3 imp-segment=0.5 imp-step=0.01 cluster=0.0005 gt=${hardvcf} map=${workflow.projectDir}/bin/chr${CHROM}.map out=${CHROM}.b5
+    fi
+
+    bcftools index ${CHROM}.b5.vcf.gz
+
+    """
+
+}
+
+
+process concat_imputed { 
+
+    errorStrategy 'ignore'
+
+    publishDir "${params.out}/variation/", mode: 'copy'
+
+    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+
+    memory '64 GB'
+    cpus 20
+
+    input:
+        tuple val(CHROM), file(vcf), file(index) 
+
+    output:
+        tuple file("WI.${date}.impute.isotype.vcf.gz"), file("WI.${date}.impute.isotype.vcf.gz.tbi")
+
+    """
+    bcftools concat -O z *.b5.vcf.gz > WI.{date}.impute.isotype.vcf.gz
+
+    tabix -p vcf WI.${date}.impute.isotype.vcf.gz
+
+    bcftools stats --verbose WI.${date}.impute.isotype.vcf.gz > WI.${date}.impute.isotype.stats.txt
+
+    """
+}
+
 
 /* 
     =========================
@@ -244,7 +330,7 @@ process snpeff_annotate_vcf {
 
     conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
-    publishDir "${params.output}/snpeff", mode: 'copy'
+    publishDir "${params.output}/variation", mode: 'copy'
 
     input:
         tuple file(vcf), file(vcf_index), \
@@ -284,7 +370,8 @@ process snpeff_annotate_vcf {
 
 process bcsq_annotate_vcf {
 
-    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+    // bcsq needs bcftools=1.12 to work properly
+    conda "/projects/b1059/software/conda_envs/bcftools"
 
     memory 16.GB
 
@@ -304,6 +391,7 @@ process bcsq_annotate_vcf {
 
         bcftools csq -O z --fasta-ref ${params.reference} \\
                      --gff-annot csq.gff.gz \\
+                     --ncsq ${params.ncsq_param} \\
                      --phase a $vcf > bcsq.vcf.gz
 
         bcftools index --tbi bcsq.vcf.gz
@@ -336,14 +424,14 @@ process AA_annotate_vcf {
 
     conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
-    publishDir "${params.output}/bcsq", mode: 'move'
+    publishDir "${params.output}/variation", mode: 'move'
 
     input:
         tuple file(vcf), file(vcf_index), file("BCSQ_bed.bed"), file(vcfanno), \
         file("dust.bed.gz"), file("dust.bed.gz.tbi"), file("repeat_masker.bed.gz"), file("repeat_masker.bed.gz.tbi")
 
     output:
-        tuple file("*hard-filter.ref_strain.vcf.gz"), file("*hard-filter.ref_strain.vcf.gz.tbi")
+        tuple file("*hard-filter.isotype.bcsq.vcf.gz"), file("*hard-filter.isotype.bcsq.vcf.gz.tbi")
         file("*.stats.txt")
 
 
@@ -374,6 +462,8 @@ process AA_annotate_vcf {
 
 process strain_list {
 
+    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+
     input:
         tuple path(vcf), path(vcf_index)
     
@@ -385,8 +475,11 @@ process strain_list {
     """
 }
 
+
 process generate_strain_vcf {
     // Generate a single VCF for every strain.
+
+    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
     tag { strain }
 
@@ -456,6 +549,8 @@ process snpeff_severity_tracks {
         variants as annotated with SNPEff
         They are used on the CeNDR browser. Previous CeNDR browser used soft filtered vcf, this one uses hard filtered vcf
     */
+
+    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
     publishDir "${params.output}/tracks", mode: 'copy'
 
