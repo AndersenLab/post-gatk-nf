@@ -205,6 +205,7 @@ processed_haps <- process_haps(haps,
                                directory = getwd(),
                                number_strains = length(strain))
 save(processed_haps, file = 'processed_haps.Rda')
+readr::write_tsv(processed_haps[[3]], "haplotype_df_isotype.bed")
 
 
 
@@ -266,6 +267,11 @@ plot_df <-
   dplyr::ungroup()
 
 save(plot_df, file = "haplotype_plot_df.Rda")
+
+# output for cegwas and nemascan
+plot_df %>%
+    dplyr::select(chromosome, start, stop, haplotype, isotype, plotpoint, segment, color) %>%
+    readr::write_tsv("haplotype_df_isotype.bed", col_names = F)
 
 
 #load("haplotype_plot_df.Rda")

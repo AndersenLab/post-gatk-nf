@@ -57,6 +57,19 @@ Should work for c.e, c.b, c.t since they all have the same number of chromosomes
 
 ''' + """
 
+      * * * *                    **           * * * *    * * *    * * * *    *   *                         *
+     *       *                * * * * *     *        *  *     *      *       *  *                         * *
+    *        *                   **         *           *     *      *       * *                         * *
+   *        *   * * * * * *      **    ***  *           * * * *      *       * *      ***      *          *
+  * * * * *    *   * *   *  *     **         *    * * *  *     *      *       *  *             * * *      *
+ *            *     *   *   *   *  *        *        *  *     *      *       *   *           *     *    *   *
+*              * * *   * * * * *    *        * * * * *  *     *      *       *    *         *      * * * * *  
+                                                                                                      **
+                                                                                                     * * 
+                                                                                                    *  *
+                                                                                                   *  *
+                                                                                                    *
+
 nextflow main.nf -profile quest --debug=true
 
 nextflow main.nf -profile quest --vcf=hard-filtered.vcf --sample_sheet=sample_sheet.tsv --bam_folder=/path/bam_folder --species=c_elegans 
@@ -72,7 +85,7 @@ nextflow main.nf -profile quest --vcf=hard-filtered.vcf --sample_sheet=sample_sh
  
     username                                                                      ${"whoami".execute().in.text}
 
-    HELP: http://andersenlab.org/dry-guide/
+    HELP: http://andersenlab.org/dry-guide/pipeline-postGATK    
 """
 out
 }
@@ -198,7 +211,7 @@ process subset_iso_ref_strains {
     cut -f1 ${params.sample_sheet} > strain_list.txt
 
     bcftools view -S strain_list.txt -O u ${vcf} | \\
-      bcftools view -O v --min-af 0.000001 --max-af 0.999999 | \\
+      bcftools view -O v --min-af 0.000001 --max-af 0.999999 | \\ # these two lines should be swapped?
       vcffixup - | \\
       bcftools view --threads ${task.cpus} -O z > WI.ref_strain.vcf.gz
 
@@ -326,7 +339,8 @@ process AA_annotate_vcf {
     publishDir "${params.output}/bcsq", mode: 'move'
 
     input:
-        tuple file(vcf), file(vcf_index), file("BCSQ_bed.bed"), file(vcfanno), file("dust.bed.gz"), file("dust.bed.gz.tbi"), file("repeat_masker.bed.gz"), file("repeat_masker.bed.gz.tbi")
+        tuple file(vcf), file(vcf_index), file("BCSQ_bed.bed"), file(vcfanno), \
+        file("dust.bed.gz"), file("dust.bed.gz.tbi"), file("repeat_masker.bed.gz"), file("repeat_masker.bed.gz.tbi")
 
     output:
         tuple file("*hard-filter.ref_strain.vcf.gz"), file("*hard-filter.ref_strain.vcf.gz.tbi")
@@ -334,7 +348,7 @@ process AA_annotate_vcf {
 
 
     """
-        output_vcf=`basename ${params.vcf} | sed 's/hard-filter.vcf.gz/hard-filter.ref_strain.vcf.gz/'`
+        output_vcf=`basename ${params.vcf} | sed 's/hard-filter.vcf.gz/hard-filter.isotype.bcsq.vcf.gz/'`
 
         bgzip BCSQ_bed.bed
         tabix BCSQ_bed.bed.gz
