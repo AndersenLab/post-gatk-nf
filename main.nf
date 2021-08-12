@@ -86,7 +86,9 @@ nextflow main.nf -profile quest --vcf=hard-filtered.vcf --sample_sheet=sample_sh
  
     username                                                                      ${"whoami".execute().in.text}
 
-    HELP: http://andersenlab.org/dry-guide/pipeline-postGATK    
+    HELP: http://andersenlab.org/dry-guide/pipeline-postGATK   
+    ----------------------------------------------------------------------------------------------
+    Git info: $workflow.repository - $workflow.revision [$workflow.commitId] 
 """
 out
 }

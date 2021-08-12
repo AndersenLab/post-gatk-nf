@@ -62,7 +62,8 @@ join_masks <- function(mask_file = NULL){
 ```
 
 ```{r}
-masked_directory <- "."
+# masked_directory <- "."
+masked_directory <- "/projects/b1059/analysis/post-gatk-nf/WI-20210121/popgen-20210125/divergent_regions/Mask_DF/"
 #mask_files <- list.files(masked_directory)
 
 filename_list = list.files(path = masked_directory, pattern="*_Mask_DF.tsv", full.names = T) 
