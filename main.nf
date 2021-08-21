@@ -34,6 +34,35 @@ if (params.debug) {
     params.output = "popgen-${date}"
 }
 
+// set default project and ws build for species
+if(params.species == "c_elegans") {
+    params.project="PRJNA13758"
+    params.ws_build="WS276"
+} else if(params.species == "c_briggsae") {
+    params.project="QX1410_nanopore"
+    params.ws_build="Feb2020"
+} else if(params.species == "c_tropicalis") {
+    params.project="NIC58_nanopore"
+    params.ws_build="June2021"
+}
+
+    
+/* Keep these static ~ They should not need to be updated */
+reference_base = "/projects/b1059/data/"
+reference_dir = "${reference_base}/${params.species}/genomes/${params.project}/${params.ws_build}"
+reference = "${reference_dir}/${params.species}.${params.project}.${params.ws_build}.genome.fa.gz"
+
+snpeff_reference = "${params.species}.${params.project}.${params.ws_build}"
+snpeff_dir = "${reference_dir}/snpeff"
+snpeff_config = "${reference_dir}/snpeff/snpEff.config"
+
+csq_gff = "${reference_dir}/csq/${params.species}.${params.project}.${params.ws_build}.csq.gff3.gz"
+AA_score = "${reference_dir}/csq/${params.species}.${params.project}.${params.ws_build}.AA_Scores.tsv"
+AA_length = "${reference_dir}/csq/${params.species}.${params.project}.${params.ws_build}.AA_Length.tsv"
+
+dust_bed = "${reference_dir}/lcr/${params.species}.${params.project}.${params.ws_build}.dust.bed.gz"
+repeat_masker_bed = "${reference_dir}/lcr/${params.species}.${params.project}.${params.ws_build}.repeat_masker.bed.gz"
+
 
 // Variant annotation files. The same for debug or normal run. 
 
