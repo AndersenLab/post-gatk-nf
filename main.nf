@@ -15,6 +15,7 @@ params.cendr = false
 // params.species is defined in quest.config, and in order to match genome folder name, which uses c_elegans, the bin bed file also used c_elegans instead of ce
 params.bin_bed = "${workflow.projectDir}/bin/bins_1kb_${params.species}.bed"
 params.ncsq_param = 224
+params.annotation = false
 
 if (params.debug) {
     params.vcf = "${workflow.projectDir}/test_data/WI.20201230.hard-filter.vcf.gz"
@@ -126,51 +127,54 @@ workflow {
     imputation.out 
         .toSortedList() | concat_imputed
 
-    // snpeff annotation
-    subset_iso_ref_strains.out
-      .combine(Channel.fromPath(params.snpeff_vcfanno_config))
-      .combine(Channel.fromPath(params.dust_bed))
-      .combine(Channel.fromPath(params.dust_bed + ".tbi"))
-      .combine(Channel.fromPath(params.repeat_masker_bed))
-      .combine(Channel.fromPath(params.repeat_masker_bed + ".tbi")) | snpeff_annotate_vcf
+    if(params.annotation == true) {
+        // snpeff annotation
+        subset_iso_ref_strains.out
+          .combine(Channel.fromPath(params.snpeff_vcfanno_config))
+          .combine(Channel.fromPath(params.dust_bed))
+          .combine(Channel.fromPath(params.dust_bed + ".tbi"))
+          .combine(Channel.fromPath(params.repeat_masker_bed))
+          .combine(Channel.fromPath(params.repeat_masker_bed + ".tbi")) | snpeff_annotate_vcf
 
-    // bcsq annotation
-    subset_iso_ref_strains.out
-      .combine(Channel.fromPath(params.csq_gff)) | bcsq_annotate_vcf
+        // bcsq annotation
+        subset_iso_ref_strains.out
+          .combine(Channel.fromPath(params.csq_gff)) | bcsq_annotate_vcf
 
-    bcsq_annotate_vcf.out.bcsq_tsv
-      .combine(Channel.fromPath(params.AA_length))
-      .combine(Channel.fromPath(params.AA_score)) | prep_other_annotation
+        bcsq_annotate_vcf.out.bcsq_tsv
+          .combine(Channel.fromPath(params.AA_length))
+          .combine(Channel.fromPath(params.AA_score)) | prep_other_annotation
 
-    bcsq_annotate_vcf.out.bcsq_vcf
-      .combine(prep_other_annotation.out)
-      .combine(Channel.fromPath(params.bcsq_vcfanno_config))
-      .combine(Channel.fromPath(params.dust_bed))
-      .combine(Channel.fromPath(params.dust_bed + ".tbi"))
-      .combine(Channel.fromPath(params.repeat_masker_bed))
-      .combine(Channel.fromPath(params.repeat_masker_bed + ".tbi")) | AA_annotate_vcf
+        bcsq_annotate_vcf.out.bcsq_vcf
+          .combine(prep_other_annotation.out)
+          .combine(Channel.fromPath(params.bcsq_vcfanno_config))
+          .combine(Channel.fromPath(params.dust_bed))
+          .combine(Channel.fromPath(params.dust_bed + ".tbi"))
+          .combine(Channel.fromPath(params.repeat_masker_bed))
+          .combine(Channel.fromPath(params.repeat_masker_bed + ".tbi")) | AA_annotate_vcf
 
 
-    if (params.cendr == true) {
-      
-      // Generate Strain-level TSV and VCFs. 
-      // note 1: since annotation is only done for isotype-ref strains, here also only include isotype ref strains.
-      // note 2: this step used vcf with only bcsq annotation b/c I'm not sure how to split into single sample vcf with protein length and amino acid score. Ryan has the code to split out single strain annotation for bcsq.
-      
-      bcsq_annotate_vcf.out | strain_list
-      strain_set = strain_list.out.splitText( it.strip() )
+        if (params.cendr == true) {
+          
+          // Generate Strain-level TSV and VCFs. 
+          // note 1: since annotation is only done for isotype-ref strains, here also only include isotype ref strains.
+          // note 2: this step used vcf with only bcsq annotation b/c I'm not sure how to split into single sample vcf with protein length and amino acid score. Ryan has the code to split out single strain annotation for bcsq.
+          
+          bcsq_annotate_vcf.out | strain_list
+          strain_set = strain_list.out.splitText( it.strip() )
 
-      strain_set.combine( bcsq_annotate_vcf.out.anno_vcf ) | generate_strain_vcf
-      
-      // Extract severity tracks
-      mod_tracks = Channel.from(["LOW", "MODERATE", "HIGH", "MODIFIER"])  
+          strain_set.combine( bcsq_annotate_vcf.out.anno_vcf ) | generate_strain_vcf
+          
+          // Extract severity tracks
+          mod_tracks = Channel.from(["LOW", "MODERATE", "HIGH", "MODIFIER"])  
 
-      snpeff_annotate_vcf.out.snpeff_vcf.spread(mod_tracks) | snpeff_severity_tracks
-      // bcsq_annotate_vcf.out.bcsq_vcf.spread(mod_tracks) | snpeff_severity_tracks
+          snpeff_annotate_vcf.out.snpeff_vcf.spread(mod_tracks) | snpeff_severity_tracks
+          // bcsq_annotate_vcf.out.bcsq_vcf.spread(mod_tracks) | snpeff_severity_tracks
 
+        }
     }
 
-    // build tryy
+
+    // build tree
     input_vcf.combine(input_vcf_index).concat(subset_iso_ref_strains.out) | build_tree
 
     // haplotype
