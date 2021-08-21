@@ -29,7 +29,7 @@ if (params.debug) {
     params.sample_sheet = ""
 
     // folder for the bam files. currently need to put all bam in the same folder
-    params.bam_folder = "/projects/b1059/data/${species}/WI/alignments/"
+    params.bam_folder = "/projects/b1059/data/${params.species}/WI/alignments/"
 
     params.output = "popgen-${date}"
 }
