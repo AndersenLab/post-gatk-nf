@@ -10,9 +10,7 @@ nextflow.preview.dsl=2
 
 date = new Date().format( 'yyyyMMdd' )
 contigs = Channel.from("I","II","III","IV","V","X")
-params.cendr = false
 // 1kb bins for all chromosomes
-// params.species is defined in quest.config, and in order to match genome folder name, which uses c_elegans, the bin bed file also used c_elegans instead of ce
 params.bin_bed = "${workflow.projectDir}/bin/bins_1kb_${params.species}.bed"
 
 if (params.debug) {
@@ -27,21 +25,15 @@ if (params.debug) {
     params.sample_sheet = ""
 
     // folder for the bam files. currently need to put all bam in the same folder
-    params.bam_folder = "/projects/b1059/data/${species}/WI/alignments/"
-
+    params.bam_folder = "/projects/b1059/data/${params.species}/WI/alignments/"
     params.output = "popgen-${date}"
 }
 
 
-// Variant annotation files. The same for debug or normal run. 
-
-// "${params.reference_dir}/csq/${species}.${project}.${ws_build}.csq.gff3.gz" from DEC genomes-nf gives some error for transposons
-params.snpeff_vcfanno_config = "${workflow.projectDir}/bin/vcfanno_snpeff.toml"
-params.bcsq_vcfanno_config = "${workflow.projectDir}/bin/vcfanno.toml"
-
 // Note that params.species is set in the config to be c_elegans (default)
 if ( params.vcf==null ) error "Parameter --vcf is required. Specify path to the full vcf."
 if ( params.sample_sheet==null ) error "Parameter --sample_sheet is required. It should contain a column of strain names, a column of bam file names and a column of bai file names WITH NO HEADERS. If the bam and bai column do not contain full path to the files, specify that path with --bam_folder."
+if ( params.species==null ) error "Parameter --species is required. Please select c_elegans, c_briggsae, or c_tropicalis."
 
 
 
@@ -52,8 +44,7 @@ def log_summary() {
 
 out = '''
 
-Subset isotype reference strains from hard-filter vcf, build trees, define haplotypes and divergent regions.
-Should work for c.e, c.b, c.t since they all have the same number of chromosomes.
+Build trees, define haplotypes and divergent regions.
 
 ''' + """
 
@@ -61,7 +52,7 @@ Should work for c.e, c.b, c.t since they all have the same number of chromosomes
      *       *                * * * * *     *        *  *     *      *       *  *                         * *
     *        *                   **         *           *     *      *       * *                         * *
    *        *   * * * * * *      **    ***  *           * * * *      *       * *      ***      *          *
-  * * * * *    *   * *   *  *     **         *    * * *  *     *      *       *  *             * * *      *
+  * * * * *    *   * *   *  *    **         *    * * *  *     *      *       *  *             * * *      *
  *            *     *   *   *   *  *        *        *  *     *      *       *   *           *     *    *   *
 *              * * *   * * * * *    *        * * * * *  *     *      *       *    *         *      * * * * *  
                                                                                                       **
@@ -70,7 +61,7 @@ Should work for c.e, c.b, c.t since they all have the same number of chromosomes
                                                                                                    *  *
                                                                                                     *
 
-nextflow main.nf -profile quest --debug=true
+nextflow main.nf -profile quest --debug
 
 nextflow main.nf -profile quest --vcf=hard-filtered.vcf --sample_sheet=sample_sheet.tsv --bam_folder=/path/bam_folder --species=c_elegans 
 
@@ -78,14 +69,15 @@ nextflow main.nf -profile quest --vcf=hard-filtered.vcf --sample_sheet=sample_sh
     ==========           ===========                                              ========================
     --debug              Set to 'true' to test                                    ${params.debug}
     --species            Species: 'c_elegans', 'c_tropicalis' or 'c_briggsae'     ${params.species}
-    --vcf                hard filtered vcf to calculate variant density           ${params.vcf}
+    --vcf                hard filtered, isotype-filtered vcf                      ${params.vcf}
     --sample_sheet       TSV with column iso-ref strain, bam, bai. no header      ${params.sample_sheet}
     --output             (Optional) output folder name                            ${params.output}
-    --cendr              Option to create strain-specific vcf for CeNDR           ${params.cendr}
  
     username                                                                      ${"whoami".execute().in.text}
 
-    HELP: http://andersenlab.org/dry-guide/pipeline-postGATK    
+    HELP: http://andersenlab.org/dry-guide/pipeline-postGATK   
+    ----------------------------------------------------------------------------------------------
+    Git info: $workflow.repository - $workflow.revision [$workflow.commitId] 
 """
 out
 }
@@ -99,87 +91,36 @@ if (params.help) {
 }
 
 
-// Read input
-input_vcf = Channel.fromPath("${params.vcf}")
-input_vcf_index = Channel.fromPath("${params.vcf}.tbi")
-
-// To convert ref strain to isotype names. Note only strains that match the first col will get changed, so won't impact ct and cb.
-isotype_convert_table = Channel.fromPath("${workflow.projectDir}/bin/ref_strain_isotype.tsv") 
-
-// Read sample sheet
-// No header. Columns are strain name, bam and bai
-sample_sheet = Channel.fromPath(params.sample_sheet)
-                       .splitCsv(sep: "\t")
-                      .map { row -> [ row[0], row[1] ]}
-
-
-
 workflow { 
 
+    // Read input
+    input_vcf = Channel.fromPath("${params.vcf}")
+    input_vcf_index = Channel.fromPath("${params.vcf}.tbi")
+
+    // To convert ref strain to isotype names. Note only strains that match the first col will get changed, so won't impact ct and cb.
+    isotype_convert_table = Channel.fromPath("${workflow.projectDir}/bin/ref_strain_isotype.tsv") 
+
+    // Read sample sheet
+    // No header. Columns are strain name, bam and bai
+    sample_sheet = Channel.fromPath(params.sample_sheet)
+                           .splitCsv(sep: "\t")
+                          .map { row -> [ row[0], row[1] ]}
+
+    //subset isotype ref strains
     input_vcf.combine(input_vcf_index).combine(isotype_convert_table) | subset_iso_ref_strains
 
-    // snpeff annotation
-    subset_iso_ref_strains.out
-      .combine(Channel.fromPath(params.snpeff_vcfanno_config))
-      .combine(Channel.fromPath(params.dust_bed))
-      .combine(Channel.fromPath(params.dust_bed + ".tbi"))
-      .combine(Channel.fromPath(params.repeat_masker_bed))
-      .combine(Channel.fromPath(params.repeat_masker_bed + ".tbi")) | snpeff_annotate_vcf
-
-    // bcsq annotation
-    subset_iso_ref_strains.out
-      .combine(Channel.fromPath(params.csq_gff)) | bcsq_annotate_vcf
-
-    bcsq_annotate_vcf.out.bcsq_tsv
-      .combine(Channel.fromPath(params.AA_length))
-      .combine(Channel.fromPath(params.AA_score)) | prep_other_annotation
-
-    bcsq_annotate_vcf.out.bcsq_vcf
-      .combine(prep_other_annotation.out)
-      .combine(Channel.fromPath(params.bcsq_vcfanno_config))
-      .combine(Channel.fromPath(params.dust_bed))
-      .combine(Channel.fromPath(params.dust_bed + ".tbi"))
-      .combine(Channel.fromPath(params.repeat_masker_bed))
-      .combine(Channel.fromPath(params.repeat_masker_bed + ".tbi")) | AA_annotate_vcf
-
-
-    if (params.cendr == true) {
-
-      
-      // Generate Strain-level TSV and VCFs. 
-      // note 1: since annotation is only done for isotype-ref strains, here also only include isotype ref strains.
-      // note 2: this step used vcf with only bcsq annotation b/c I'm not sure how to split into single sample vcf with protein length and amino acid score. Ryan has the code to split out single strain annotation for bcsq.
-      
-      // bcsq_annotate_vcf.out | strain_list
-      // strain_set = strain_list.out.splitText( it.strip() )
-
-      // strain_set.combine( bcsq_annotate_vcf.out.anno_vcf ) | generate_strain_tsv
-      
-
-      // Extract severity tracks
-      mod_tracks = Channel.from(["LOW", "MODERATE", "HIGH", "MODIFIER"])  
-
-      snpeff_annotate_vcf.out.snpeff_vcf.spread(mod_tracks) | snpeff_severity_tracks
-
-      // bcsq_annotate_vcf.out.bcsq_vcf.spread(mod_tracks) | snpeff_severity_tracks
-    }
-
-
-
+    // build tree
     input_vcf.combine(input_vcf_index).concat(subset_iso_ref_strains.out) | build_tree
 
+    // haplotype
     subset_iso_ref_strains.out.combine(contigs) | haplotype_sweep_IBD
+    subset_iso_ref_strains.out.combine(sample_sheet).combine(isotype_convert_table) | count_variant_coverage
 
     // haplotype_sweep_plot and define_divergent_region always give error during debugging run prob b/c the debug dataset is too small. so turn it off when debugging
     if (!params.debug) {
       haplotype_sweep_IBD.out.collect() | haplotype_sweep_plot
+      count_variant_coverage.out.collect() | define_divergent_region
     }
-
-    subset_iso_ref_strains.out.combine(sample_sheet).combine(isotype_convert_table) | count_variant_coverage
-
-    //if (!params.debug) {
-     // count_variant_coverage.out.collect() | define_divergent_region
-    //}
 
 }
 
@@ -197,7 +138,7 @@ process subset_iso_ref_strains {
     memory 16.GB
     cpus 4
 
-    publishDir "${params.output}", mode: 'copy'
+    publishDir "${params.output}/variation", mode: 'copy'
 
     input: 
         tuple file(vcf), file(vcf_index), file("ref_strain_isotype.tsv")
@@ -211,7 +152,7 @@ process subset_iso_ref_strains {
     cut -f1 ${params.sample_sheet} > strain_list.txt
 
     bcftools view -S strain_list.txt -O u ${vcf} | \\
-      bcftools view -O v --min-af 0.000001 --max-af 0.999999 | \\ # these two lines should be swapped?
+      bcftools view -O v --min-af 0.000001 --max-af 0.999999 | \\
       vcffixup - | \\
       bcftools view --threads ${task.cpus} -O z > WI.ref_strain.vcf.gz
 
@@ -231,284 +172,6 @@ process subset_iso_ref_strains {
     """
 
 }
-
-
-/* 
-    =========================
-    Annotate isotype-only vcf
-    =========================
-*/
-
-
-process snpeff_annotate_vcf {
-
-    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
-
-    publishDir "${params.output}/snpeff", mode: 'copy'
-
-    input:
-        tuple file(vcf), file(vcf_index), \
-              path(vcfanno), \
-              path("dust.bed.gz"), \
-              path("dust.bed.gz.tbi"), \
-              path("repeat_masker.bed.gz"), \
-              path("repeat_masker.bed.gz.tbi")
-
-    output:
-        tuple path("*.snpeff.vcf.gz"), path("*.snpeff.vcf.gz.tbi"), emit: snpeff_vcf
-        path "snpeff.stats.csv"
-
-
-    script:
-    """
-        output=`echo ${vcf} | sed 's/.vcf.gz/.snpeff.vcf.gz/'`
-
-        bcftools view -O v ${vcf} | \\
-        snpEff eff -csvStats snpeff.stats.csv \\
-                   -no-downstream \\
-                   -no-intergenic \\
-                   -no-upstream \\
-                   -nodownload \\
-        -dataDir ${params.snpeff_dir} \\
-        -config ${params.snpeff_dir}/snpEff.config \\
-        ${params.snpeff_reference} | \\
-        bcftools view -O z > out.vcf.gz
-
-        vcfanno ${vcfanno} out.vcf.gz | bcftools view -O z > \${output}
-        bcftools index --tbi \${output}
-    """
-
-}
-
-
-
-process bcsq_annotate_vcf {
-
-    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
-
-    memory 16.GB
-
-    input:
-        tuple file(vcf), file(vcf_index), file(gff)
-
-
-    output:
-        tuple file("bcsq.vcf.gz"), file("bcsq.vcf.gz.tbi"), emit:bcsq_vcf
-        path "BCSQ.tsv", emit: bcsq_tsv
-
-    script:
-    """
-        # bgzip -c $gff > csq.gff.gz
-        cp $gff csq.gff.gz
-        tabix -p gff csq.gff.gz
-
-        bcftools csq -O z --fasta-ref ${params.reference} \\
-                     --gff-annot csq.gff.gz \\
-                     --phase a $vcf > bcsq.vcf.gz
-
-        bcftools index --tbi bcsq.vcf.gz
-
-        bcftools query -e 'INFO/BCSQ="."' -f '%CHROM %POS %BCSQ\\n' bcsq.vcf.gz > BCSQ.tsv
-    """
-
-}
-
-
-process prep_other_annotation {
-
-    conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
-    echo true
-
-    input:
-        tuple path("BCSQ.tsv"), path("gff_AA_Length.tsv"), path("AA_Scores.tsv")
-
-    output:
-        path("BCSQ_bed.bed")
-
-    """
-      Rscript --vanilla ${workflow.projectDir}/bin/Parse_and_Score.R BCSQ.tsv AA_Scores.tsv gff_AA_Length.tsv
-    """
-
-}
-
-
-process AA_annotate_vcf {
-
-    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
-
-    publishDir "${params.output}/bcsq", mode: 'move'
-
-    input:
-        tuple file(vcf), file(vcf_index), file("BCSQ_bed.bed"), file(vcfanno), \
-        file("dust.bed.gz"), file("dust.bed.gz.tbi"), file("repeat_masker.bed.gz"), file("repeat_masker.bed.gz.tbi")
-
-    output:
-        tuple file("*hard-filter.ref_strain.vcf.gz"), file("*hard-filter.ref_strain.vcf.gz.tbi")
-        file("*.stats.txt")
-
-
-    """
-        output_vcf=`basename ${params.vcf} | sed 's/hard-filter.vcf.gz/hard-filter.isotype.bcsq.vcf.gz/'`
-
-        bgzip BCSQ_bed.bed
-        tabix BCSQ_bed.bed.gz
-
-        vcfanno ${vcfanno} $vcf | bcftools view -O z > \${output_vcf}
-
-        bcftools index --tbi \${output_vcf}
-
-        bcftools stats -s- \${output_vcf} > \${output_vcf}.stats.txt
-
-    """
-}
-
-
-
-
-/* 
-    ==============================
-    Generate individual strain vcf.
-    ==============================
-*/
-
-
-process strain_list {
-
-    input:
-        tuple path(vcf), path(vcf_index)
-    
-    output:
-        file("samples.txt")
-
-    """
-        bcftools query --list-samples ${vcf} > samples.txt
-    """
-}
-
-process generate_strain_vcf {
-    // Generate a single VCF for every strain.
-
-    tag { strain }
-
-    publishDir "${params.output}/strain/vcf", mode: 'copy', pattern: "*.vcf.gz*"
-
-    input:
-        tuple val(strain), path(vcf), file(vcf_index)
-
-    output:
-        tuple path("${strain}.${date}.vcf.gz"),  path("${strain}.${date}.vcf.gz.tbi"), path("${strain}.${date}.vcf.gz.csi")
-
-    """
-        bcftools query --samples ${stain} ${vcf} > ${strain}.${date}.vcf
-        bgzip ${strain}.${date}.vcf
-        bcftools index -c ${strain}.${date}.vcf.gz
-        bcftools index -t ${strain}.${date}.vcf.gz
-
-    """
-
-}
-
-
-/*
-process generate_strain_tsv {
-    // Generate a single TSV for every strain.
-
-    tag { strain }
-
-    publishDir "${params.output}/strain/tsv", mode: 'copy', pattern: "*.tsv.gz*"
-
-    input:
-        tuple val(strain), path(vcf), file(vcf_index)
-
-    output:
-        tuple path("${strain}.${date}.tsv.gz"),  path("${strain}.${date}.tsv.gz.tbi")
-
-    """
-        # Generate TSV
-        {
-            echo -e 'CHROM\\tPOS\\tREF\\tALT\\tFILTER\\tFT\\tGT';
-            bcftools query -f '[%CHROM\t%POS\t%REF\t%ALT\t%FILTER\t%FT\t%TGT]\n' --samples ${strain} ${vcf};
-        } | awk -F'\\t' -vOFS='\\t' '{ gsub("\\\\.", "PASS", \$6) ; print }' > ${strain}.${date}.tsv
-
-        bgzip ${strain}.${date}.tsv
-        tabix -S 1 -s 1 -b 2 -e 2 ${strain}.${date}.tsv.gz
-    """
-
-}
-*/
-
-
-
-/* 
-    ==========================================
-    Generate severity tracks for cendr browser
-    ==========================================
-*/
-
-
-process snpeff_severity_tracks {
-    /*
-        The severity tracks are bedfiles with annotations for
-        LOW
-        MODERATE
-        HIGH
-        MODIFIER
-        variants as annotated with SNPEff
-        They are used on the CeNDR browser. Previous CeNDR browser used soft filtered vcf, this one uses hard filtered vcf
-    */
-
-    publishDir "${params.output}/tracks", mode: 'copy'
-
-    tag { severity }
-
-    input:
-        tuple path("in.vcf.gz"), path("in.vcf.gz.csi"), val(severity)
-    output:
-        set file("${date}.${severity}.bed.gz"), file("${date}.${severity}.bed.gz.tbi")
-
-    """
-        bcftools view --apply-filters PASS in.vcf.gz | \
-        grep ${severity} | \
-        awk '\$0 !~ "^#" { print \$1 "\\t" (\$2 - 1) "\\t" (\$2)  "\\t" \$1 ":" \$2 "\\t0\\t+"  "\\t" \$2 - 1 "\\t" \$2 "\\t0\\t1\\t1\\t0" }' | \\
-        bgzip  > ${date}.${severity}.bed.gz
-        tabix -p bed ${date}.${severity}.bed.gz
-        fsize=\$(zcat ${date}.${severity}.bed.gz | wc -c)
-        if [ \${fsize} -lt 2000 ]; then
-            exit 1
-        fi;
-    """
-}
-
-
-/* bcsq version is untested but should work. BCSQ doesn't label consequence as LOW, MODERATE, HIGH etc, Ryan is compiling a list that will match BCSQ label to Snpeff label, so we can still have a LOW track, a MODERATE track etc.
-
-process bcsq_severity_tracks {
-
-    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
-
-    publishDir "${params.output}/tracks", mode: 'copy'
-
-    tag { severity }
-
-    input:
-        tuple path("in.vcf.gz"), path("in.vcf.gz.tbi"), val(severity)
-    output:
-        set file("${date}.${severity}.bed.gz"), file("${date}.${severity}.bed.gz.tbi")
-
-    """
-        bcftools view in.vcf.gz | \
-        grep -x -f ${workflow.projectDir}/bin/${severity}.txt | \
-        awk '\$0 !~ "^#" { print \$1 "\\t" (\$2 - 1) "\\t" (\$2)  "\\t" \$1 ":" \$2 "\\t0\\t+"  "\\t" \$2 - 1 "\\t" \$2 "\\t0\\t1\\t1\\t0" }' | \\
-        bgzip  > ${date}.${severity}.bed.gz
-        tabix -p bed ${date}.${severity}.bed.gz
-        fsize=\$(zcat ${date}.${severity}.bed.gz | wc -c)
-        if [ \${fsize} -lt 2000 ]; then
-            exit 1
-        fi;
-    """
-}
-
-
 
 
 
