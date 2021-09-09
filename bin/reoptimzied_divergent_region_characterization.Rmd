@@ -62,9 +62,8 @@ join_masks <- function(mask_file = NULL){
 ```
 
 ```{r}
-# masked_directory <- "."
-masked_directory <- "/projects/b1059/analysis/post-gatk-nf/WI-20210121/popgen-20210125/divergent_regions/Mask_DF/"
-#mask_files <- list.files(masked_directory)
+masked_directory <- "."
+mask_files <- list.files(masked_directory)
 
 filename_list = list.files(path = masked_directory, pattern="*_Mask_DF.tsv", full.names = T) 
 # path do not need the final "/". full.names add path to the list
@@ -281,7 +280,11 @@ df_divergent_final_isotype <- df_divergent_final %>%
 
 write.csv(df_divergent_final_isotype, file="DataS3_divergent_regions_isotypes.csv")
 
-df_divergent_final_isotype %>% select(CHROM, cluster_start, cluster_end, STRAIN) %>% arrange(CHROM, cluster_start) %>% write.table("divergent_regions_strain.bed", quote=F, col.names = F, row.names=F, sep="\t")
+div_bed <- df_divergent_final_isotype %>% 
+  dplyr::select(CHROM, cluster_start, cluster_end, STRAIN) %>% 
+  dplyr::arrange(CHROM, cluster_start) 
+
+write.table(div_bed, "divergent_regions_strain.bed", quote=F, col.names = F, row.names=F, sep="\t")
 
 ## total size
 
@@ -413,4 +416,42 @@ readr::write_tsv(df_div_all_clustered, "All_divergent_regions_clustered.tsv")
 #readr::write_tsv(df_div_all_clustered, "All_divergent_regions_clustered.bed", col_names=F)
 
 #df_div_all_clustered <- readr::read_tsv(file="All_divergent_regions_clustered.tsv")
+```
+
+# plot divergent regions
+```{r}
+
+# get chromosome lengths
+df_chr_length <- data.table::fread("df_chr_length.tsv")
+
+# order by size of total divergent regions per strain
+div_bed <- div_bed %>%
+  dplyr::rename(CHROM = V1, start = V2, stop = V3, strain = V4) %>%
+  dplyr::mutate(size = stop - start) %>%
+  dplyr::group_by(strain) %>%
+  dplyr::mutate(total = sum(size)) %>%
+  dplyr::arrange(desc(total))
+div_bed$strain <- factor(div_bed$strain, levels = unique(div_bed$strain))  
+
+div_bed %>%
+  na.omit() %>%
+  ggplot(.) +
+  geom_rect(data=df_chr_length, aes(xmin =  start/1e6, xmax = stop/1e6), ymin = div_bed$strain[1], ymax=div_bed$strain[1], color='transparent', fill='transparent', size =0.1) +
+  geom_rect(aes(xmin =  start/1e6, xmax = stop/1e6, ymin = strain , ymax = strain), fill = 'black',color='black', size = 0.5) +
+  theme_bw(12) +
+  theme(#axis.text.x = element_text(face = "bold"), 
+        axis.text.y  = element_blank(), 
+        legend.position = 'none',
+        axis.title=element_text(face = "bold"),
+        strip.text = element_text(face = "bold"),
+        axis.ticks.y = element_blank(), 
+        # panel.spacing = unit(0.1, "lines"), 
+        panel.grid = element_blank()) +
+  # scale_y_continuous(expand = c(0.00, 0.00), limits=c(0.4,327.6)) +
+  scale_x_continuous(expand = c(0.02, 0.02), breaks = c(5, 10, 15)) +
+  facet_grid(~CHROM, scales="free",space = 'free') +
+  labs(x="Genomic position (Mb)",y= glue::glue("{length(unique(div_bed$strain))} wild isotypes"))
+ggsave("divergent_regions.png", height = 5, width = 7.5)
+
+
 ```

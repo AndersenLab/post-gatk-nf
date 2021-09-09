@@ -2,6 +2,7 @@
 /*
     Authors:
     - Dan Lu <dan.lu@northwestern.edu>
+    - Katie Evans <katiesevans9@gmail.com>
 */
 
 nextflow.preview.dsl=2
@@ -332,10 +333,12 @@ process define_divergent_region {
         file("*")
 
     output:
-        file("divergent_regions_strain.bed")
+        tuple file("divergent_regions_strain.bed"), file("divergent_regions.png")
 
     """
     cp ${workflow.projectDir}/bin/reoptimzied_divergent_region_characterization.Rmd reoptimzied_divergent_region_characterization.Rmd
+    
+    cp ${workflow.projectDir}/bin/${params.species}_chr_lengths.tsv ./df_chr_length.tsv
     Rscript -e "rmarkdown::render('reoptimzied_divergent_region_characterization.Rmd')"
 
     """

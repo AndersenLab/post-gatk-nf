@@ -3,8 +3,6 @@ library(data.table)
 library(plyr)
 library(tidyverse)
 library(igraph)
-library(dplyr)
-library(ggplot2)
 
 #works, returns an intervals object, output goes to make.graphs
 make.breaks <- function(matchset, remove_small, size) {
@@ -334,7 +332,7 @@ ggplot(plot_df,
     facet_grid(.~chromosome, scales="free", space="free") +
     theme(legend.position="none")
 
-ggsave(paste("~/Dropbox/AndersenLab/CeNDR/Data_processing/20210121/6b.haplotype/max_haplotype_genome_wide.pdf"),
+ggsave(paste("max_haplotype_genome_wide.pdf"),
        height = 70, width = 35, limitsize = FALSE)
 
 #===============#
