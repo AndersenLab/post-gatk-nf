@@ -70,7 +70,7 @@ nextflow main.nf -profile quest --vcf=hard-filtered.vcf --sample_sheet=sample_sh
     ==========           ===========                                              ========================
     --debug              Set to 'true' to test                                    ${params.debug}
     --species            Species: 'c_elegans', 'c_tropicalis' or 'c_briggsae'     ${params.species}
-    --vcf                hard filtered, isotype-filtered vcf                      ${params.vcf}
+    --vcf                hard filtered vcf                                        ${params.vcf}
     --sample_sheet       TSV with column iso-ref strain, bam, bai. no header      ${params.sample_sheet}
     --output             (Optional) output folder name                            ${params.output}
  
