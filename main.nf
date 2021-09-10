@@ -94,6 +94,9 @@ if (params.help) {
 
 workflow { 
 
+    // make species sheet for nemascan
+    get_species_sheet()
+
     // Read input
     input_vcf = Channel.fromPath("${params.vcf}")
     input_vcf_index = Channel.fromPath("${params.vcf}.tbi")
@@ -140,6 +143,7 @@ process subset_iso_ref_strains {
     cpus 4
 
     publishDir "${params.output}/variation", mode: 'copy'
+    publishDir "${params.output}/NemaScan", pattern: "div_isotype_list.txt", mode: 'copy'
 
     input: 
         tuple file(vcf), file(vcf_index), file("ref_strain_isotype.tsv")
@@ -169,6 +173,9 @@ process subset_iso_ref_strains {
         mv WI.ref_strain.vcf.gz \${output}
         mv WI.ref_strain.vcf.gz.tbi \${output}.tbi
     fi
+
+    # output list of strains for divergent
+    bcftools query -l ${vcf} > div_isotype_list.txt
 
     """
 
@@ -254,10 +261,13 @@ process haplotype_sweep_plot {
     errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
 
     publishDir "${params.output}/haplotype", mode: 'copy'
+    publishDir "${params.output}/NemaScan", pattern: "haplotype_df_isotype.bed", mode: 'copy'
 
-    input: path("*")
+    input: 
+        path("*")
 
-    output: path("*")
+    output: 
+        path("*")
 
     """
 
@@ -318,13 +328,13 @@ process count_variant_coverage {
 }
 
 
-
-
 process define_divergent_region {
 
     conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
 
     publishDir "${params.output}/divergent_regions", mode: 'copy'
+    publishDir "${params.output}/NemaScan", pattern: 'divergent_bins.bed', mode: 'copy'
+    publishDir "${params.output}/NemaScan", pattern: 'divergent_df_isotype.bed', mode: 'copy'
 
     memory { 128.GB + 20.GB * task.attempt }
     errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
@@ -341,7 +351,31 @@ process define_divergent_region {
     cp ${workflow.projectDir}/bin/${params.species}_chr_lengths.tsv ./df_chr_length.tsv
     Rscript -e "rmarkdown::render('reoptimzied_divergent_region_characterization.Rmd')"
 
+    # files for NemaScan
+    cp ${params.bin_bed} ./divergent_bins.bed
+    cp divergent_regions_strain.bed ./divergent_df_isotype.bed
+
     """
+}
+
+
+process get_species_sheet {
+    
+    publishDir "${params.output}/NemaScan/", mode: 'copy'
+
+    conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
+
+    output:
+        file("strain_isotype_lookup.tsv")
+
+    """
+    # add R_libpath to .libPaths() into the R script, create a copy into the NF working directory 
+    echo ".libPaths(c(\\"${params.R_libpath}\\", .libPaths() ))" | cat - ${workflow.projectDir}/bin/download_google_sheet.R > download_google_sheet.R 
+
+    Rscript --vanilla download_google_sheet.R ${params.species}
+        
+    """
+
 }
 
 
