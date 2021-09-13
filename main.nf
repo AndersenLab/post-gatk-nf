@@ -114,7 +114,7 @@ workflow {
     input_vcf.combine(input_vcf_index).combine(isotype_convert_table) | subset_iso_ref_strains
 
     // build tree
-    input_vcf.combine(input_vcf_index).concat(subset_iso_ref_strains.out) | build_tree
+    input_vcf.combine(input_vcf_index).concat(subset_iso_ref_strains.out) | build_tree | plot_tree
 
     // haplotype
     subset_iso_ref_strains.out.combine(contigs) | haplotype_sweep_IBD
@@ -222,6 +222,26 @@ process build_tree {
 
 }
 
+
+process plot_tree {
+
+    conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
+
+    publishDir "${params.output}/tree", mode: 'copy'
+
+    input:
+        file(tree)
+
+    output:
+        file("*.pdf")
+
+"""
+    Rscript --vanilla ${workflow.projectDir}/bin/plot_tree.R ${tree}
+"""
+
+
+
+}
 
 /* 
     ==================
