@@ -11,14 +11,13 @@ nextflow.preview.dsl=2
 
 date = new Date().format( 'yyyyMMdd' )
 contigs = Channel.from("I","II","III","IV","V","X")
-// 1kb bins for all chromosomes
-params.bin_bed = "${workflow.projectDir}/bin/bins_1kb_${params.species}.bed"
 
 if (params.debug) {
     params.vcf = "${workflow.projectDir}/test_data/WI.20201230.hard-filter.vcf.gz"
     params.sample_sheet = "${workflow.projectDir}/test_data/sample_sheet.tsv"
     params.bam_folder = "${workflow.projectDir}/test_data/bam"
     params.output = "popgen-${date}-debug"
+    params.species = "c_elegans"
 
 } else {
     // Read input
@@ -35,6 +34,9 @@ if (params.debug) {
 if ( params.vcf==null ) error "Parameter --vcf is required. Specify path to the full vcf."
 if ( params.sample_sheet==null ) error "Parameter --sample_sheet is required. It should contain a column of strain names, a column of bam file names and a column of bai file names WITH NO HEADERS. If the bam and bai column do not contain full path to the files, specify that path with --bam_folder."
 if ( params.species==null ) error "Parameter --species is required. Please select c_elegans, c_briggsae, or c_tropicalis."
+
+// 1kb bins for all chromosomes
+params.bin_bed = "${workflow.projectDir}/bin/bins_1kb_${params.species}.bed"
 
 
 
@@ -111,7 +113,7 @@ workflow {
                           .map { row -> [ row[0], row[1] ]}
 
     //subset isotype ref strains
-    input_vcf.combine(input_vcf_index).combine(isotype_convert_table) | subset_iso_ref_strains
+    input_vcf.combine(input_vcf_index).combine(isotype_convert_table) | subset_iso_ref_strains | make_small_vcf
 
     // build tree
     input_vcf.combine(input_vcf_index).concat(subset_iso_ref_strains.out) | build_tree | plot_tree
@@ -181,6 +183,24 @@ process subset_iso_ref_strains {
 
 }
 
+// make a small genotype only vcf for download from cendr for nemascan
+process make_small_vcf {
+
+    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+    publishDir "${params.output}/variation", mode: 'copy'
+
+    input:
+        tuple file(vcf), file(vcf_index)
+
+    output:
+        tuple file("WI.*.small.hard-filter.isotype.vcf.gz"), file("WI.*.small.hard-filter.isotype.vcf.gz.tbi")
+
+"""
+    bcftools annotate -x INFO,^FORMAT/GT ${vcf} | bgzip > WI.${date}.small.hard-filter.isotype.vcf.gz
+    bcftools index -t WI.${date}.small.hard-filter.isotype.vcf.gz
+"""
+
+}
 
 
 /* 
@@ -389,10 +409,7 @@ process get_species_sheet {
         file("strain_isotype_lookup.tsv")
 
     """
-    # add R_libpath to .libPaths() into the R script, create a copy into the NF working directory 
-    echo ".libPaths(c(\\"${params.R_libpath}\\", .libPaths() ))" | cat - ${workflow.projectDir}/bin/download_google_sheet.R > download_google_sheet.R 
-
-    Rscript --vanilla download_google_sheet.R ${params.species}
+    Rscript --vanilla ${workflow.projectDir}/bin/download_google_sheet.R ${params.species}
         
     """
 
