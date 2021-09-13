@@ -13,7 +13,9 @@ date = new Date().format( 'yyyyMMdd' )
 contigs = Channel.from("I","II","III","IV","V","X")
 
 if (params.debug) {
-    params.vcf = "${workflow.projectDir}/test_data/WI.20201230.hard-filter.vcf.gz"
+    params.vcf_folder = "${workflow.projectDir}/test_data/"
+    params.vcf = "${params.vcf_folder}/WI.20201230.hard-filter.vcf.gz"
+    params.soft_vcf = "${params.vcf}"
     params.sample_sheet = "${workflow.projectDir}/test_data/sample_sheet.tsv"
     params.bam_folder = "${workflow.projectDir}/test_data/bam"
     params.output = "popgen-${date}-debug"
@@ -21,8 +23,10 @@ if (params.debug) {
 
 } else {
     // Read input
-    params.vcf = ""
-    params.sample_sheet = ""
+    // params.vcf_folder = ""
+    // params.sample_sheet = ""
+    params.vcf = "${params.vcf_folder}/WI.*.hard-filter.vcf.gz" 
+    params.soft_vcf = "${params.vcf_folder}/WI.*.soft-filter.vcf.gz"
 
     // folder for the bam files. currently need to put all bam in the same folder
     params.bam_folder = "/projects/b1059/data/${params.species}/WI/alignments/"
@@ -31,7 +35,7 @@ if (params.debug) {
 
 
 // Note that params.species is set in the config to be c_elegans (default)
-if ( params.vcf==null ) error "Parameter --vcf is required. Specify path to the full vcf."
+if ( params.vcf==null ) error "Parameter --vcf is required. Specify path to the folder containing a 'hard-filter.vcf.gz' and a 'soft-filter.vcf.gz'."
 if ( params.sample_sheet==null ) error "Parameter --sample_sheet is required. It should contain a column of strain names, a column of bam file names and a column of bai file names WITH NO HEADERS. If the bam and bai column do not contain full path to the files, specify that path with --bam_folder."
 if ( params.species==null ) error "Parameter --species is required. Please select c_elegans, c_briggsae, or c_tropicalis."
 
@@ -72,7 +76,7 @@ nextflow main.nf -profile quest --vcf=hard-filtered.vcf --sample_sheet=sample_sh
     ==========           ===========                                              ========================
     --debug              Set to 'true' to test                                    ${params.debug}
     --species            Species: 'c_elegans', 'c_tropicalis' or 'c_briggsae'     ${params.species}
-    --vcf                hard filtered vcf                                        ${params.vcf}
+    --vcf_folder         Path to folder containing hard and soft VCF              ${params.vcf_folder}
     --sample_sheet       TSV with column iso-ref strain, bam, bai. no header      ${params.sample_sheet}
     --output             (Optional) output folder name                            ${params.output}
  
@@ -103,6 +107,10 @@ workflow {
     input_vcf = Channel.fromPath("${params.vcf}")
     input_vcf_index = Channel.fromPath("${params.vcf}.tbi")
 
+    // Also use soft-filter vcf from same path location as hard filtered
+    soft_vcf = Channel.fromPath("${params.soft_vcf}")
+    soft_vcf_index = Channel.fromPath("${params.soft_vcf}.tbi")
+
     // To convert ref strain to isotype names. Note only strains that match the first col will get changed, so won't impact ct and cb.
     isotype_convert_table = Channel.fromPath("${workflow.projectDir}/bin/ref_strain_isotype.tsv") 
 
@@ -114,6 +122,7 @@ workflow {
 
     //subset isotype ref strains
     input_vcf.combine(input_vcf_index).combine(isotype_convert_table) | subset_iso_ref_strains | make_small_vcf
+    soft_vcf.combine(soft_vcf_index).combine(isotype_convert_table) | subset_iso_ref_soft
 
     // build tree
     input_vcf.combine(input_vcf_index).concat(subset_iso_ref_strains.out) | build_tree | plot_tree
@@ -127,6 +136,7 @@ workflow {
       haplotype_sweep_IBD.out.collect() | haplotype_sweep_plot
       count_variant_coverage.out.collect() | define_divergent_region
     }
+    
 
 }
 
@@ -178,6 +188,49 @@ process subset_iso_ref_strains {
 
     # output list of strains for divergent
     bcftools query -l ${vcf} > div_isotype_list.txt
+
+    """
+
+}
+
+// i know there has to be a better way to do this, but this should work. subset iso ref strains for soft filter vcf
+process subset_iso_ref_soft {
+
+    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+
+    memory 16.GB
+    cpus 4
+
+    publishDir "${params.output}/variation", mode: 'copy'
+
+    input: 
+        tuple file(vcf), file(vcf_index), file("ref_strain_isotype.tsv")
+
+    output: 
+        tuple file("*.isotype.vcf.gz"), file("*.isotype.vcf.gz.tbi")
+
+
+    """
+    output=`echo $vcf | sed 's/.vcf.gz/.isotype.vcf.gz/'`
+    cut -f1 ${params.sample_sheet} > strain_list.txt
+
+    bcftools view -S strain_list.txt -O u ${vcf} | \\
+      bcftools view -O v --min-af 0.000001 --max-af 0.999999 | \\
+      vcffixup - | \\
+      bcftools view --threads ${task.cpus} -O z > WI.ref_strain.vcf.gz
+
+    bcftools index WI.ref_strain.vcf.gz
+    bcftools index --tbi WI.ref_strain.vcf.gz
+
+    # If c.e., convert to isotype names
+    if [ ${params.species} = "c_elegans" ]
+    then
+        bcftools reheader -s ref_strain_isotype.tsv WI.ref_strain.vcf.gz | bcftools view -O z > \${output}
+        bcftools index --tbi \${output}
+    else
+        mv WI.ref_strain.vcf.gz \${output}
+        mv WI.ref_strain.vcf.gz.tbi \${output}.tbi
+    fi
 
     """
 
