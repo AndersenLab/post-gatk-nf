@@ -120,16 +120,19 @@ workflow {
                            .splitCsv(sep: "\t")
                           .map { row -> [ row[0], row[1] ]}
 
-    //subset isotype ref strains
+    // subset isotype ref strains
     input_vcf.combine(input_vcf_index).combine(isotype_convert_table) | subset_iso_ref_strains | make_small_vcf
     soft_vcf.combine(soft_vcf_index).combine(isotype_convert_table) | subset_iso_ref_soft
+
+    // subset SNV vcf for imputation
+    subset_iso_ref_strains.out | subset_snv
 
     // build tree
     input_vcf.combine(input_vcf_index).concat(subset_iso_ref_strains.out) | build_tree | plot_tree
 
     // haplotype
     subset_iso_ref_strains.out.combine(contigs) | haplotype_sweep_IBD
-    subset_iso_ref_strains.out.combine(sample_sheet).combine(isotype_convert_table) | count_variant_coverage
+    subset_iso_ref_strains.out.combine(sample_sheet).combine(isotype_convert_table).view() | count_variant_coverage
 
     // haplotype_sweep_plot and define_divergent_region always give error during debugging run prob b/c the debug dataset is too small. so turn it off when debugging
     if (!params.debug) {
@@ -151,7 +154,7 @@ process subset_iso_ref_strains {
 
     conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
-    memory 16.GB
+    memory 20.GB
     cpus 4
 
     publishDir "${params.output}/variation", mode: 'copy'
@@ -198,7 +201,7 @@ process subset_iso_ref_soft {
 
     conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
-    memory 16.GB
+    memory 20.GB
     cpus 4
 
     publishDir "${params.output}/variation", mode: 'copy'
@@ -236,6 +239,30 @@ process subset_iso_ref_soft {
 
 }
 
+process subset_snv {
+
+    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+
+    publishDir "${params.output}/variation", mode: 'copy'
+
+    input:
+        tuple file(hardvcf), file(hardvcf_index)
+
+    output:
+        tuple file("WI.${date}.hard-filter.isotype.SNV.vcf.gz"), file("WI.${date}.hard-filter.isotype.SNV.vcf.gz.tbi")
+
+    """
+    bcftools view -O u ${hardvcf} | \
+    bcftools view -O v --types snps --min-af 0.000001 --max-af 0.999999 | \
+    vcffixup - | \
+    bcftools view --threads=3 -O z > WI.${date}.hard-filter.isotype.SNV.vcf.gz
+    
+    bcftools index --tbi WI.${date}.hard-filter.isotype.SNV.vcf.gz
+
+    """
+
+}
+
 // make a small genotype only vcf for download from cendr for nemascan
 process make_small_vcf {
 
@@ -266,8 +293,8 @@ process build_tree {
 
     conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
-    memory 20.GB
-
+    memory { 24.GB + 10.GB * task.attempt }
+    errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
     publishDir "${params.output}/tree", mode: 'copy'
 
     input:
@@ -393,7 +420,7 @@ process count_variant_coverage {
         file("*_Mask_DF.tsv")
 
     """
-    # if c.e and the strain is one of those that isotype name differs from strain name, convert isotype ref strain name to isotype name
+    # if c.e and the strain is one of those that isotype name differs from strain name, convert isotype name to isotype ref name
     if [ ${params.species} = "c_elegans" ] && grep -q ${strain} ref_strain_isotype.tsv
     then
         ref_iso_pair=`grep ${strain} ref_strain_isotype.tsv`
@@ -405,10 +432,12 @@ process count_variant_coverage {
         isotype_name=${strain}
     fi
 
+    # although calling the isotype strain, it is actually using data from ref strain.
     bcftools view -s \${isotype_name} ${vcf} | bcftools filter -i 'GT="alt"' -Ov | \\
 
     bedtools coverage -a ${params.bin_bed} -b stdin -counts > \${isotype_name}_variant_counts.txt
 
+    # need to use the isotype ref strain here, not the isotype strain!
     mosdepth -b ${params.bin_bed} \${isotype_name} ${params.bam_folder}/${bam}
 
     gunzip \${isotype_name}.regions.bed.gz
@@ -419,6 +448,7 @@ process count_variant_coverage {
 
     """
 }
+
 
 
 process define_divergent_region {
