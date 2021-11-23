@@ -131,13 +131,13 @@ workflow {
     input_vcf.combine(input_vcf_index).concat(subset_iso_ref_strains.out) | build_tree | plot_tree
 
     // haplotype
-    subset_iso_ref_strains.out.combine(contigs) | haplotype_sweep_IBD
-    subset_iso_ref_strains.out.combine(sample_sheet).combine(isotype_convert_table).view() | count_variant_coverage
+    //subset_iso_ref_strains.out.combine(contigs) | haplotype_sweep_IBD
+    subset_iso_ref_strains.out.combine(sample_sheet).combine(isotype_convert_table) | count_variant_coverage
 
     // haplotype_sweep_plot and define_divergent_region always give error during debugging run prob b/c the debug dataset is too small. so turn it off when debugging
     if (!params.debug) {
-      haplotype_sweep_IBD.out.collect() | haplotype_sweep_plot
-      count_variant_coverage.out.collect() | define_divergent_region
+      //haplotype_sweep_IBD.out.collect() | haplotype_sweep_plot
+      //count_variant_coverage.out.collect() | define_divergent_region
     }
     
 
