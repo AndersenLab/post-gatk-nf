@@ -1,0 +1,11 @@
+[[annotation]]
+file="ANC.bed.gz"
+columns = [4]
+names=["AA"]
+ops=["self"]
+
+[[annotation]]
+file="species_genetic_map.bed.gz"
+columns = [4]
+names=["cM"]
+ops=["self"]

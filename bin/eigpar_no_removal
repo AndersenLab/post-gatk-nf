@@ -1,0 +1,10 @@
+genotypename:    eigenstrat_input.ped
+snpname:         eigenstrat_input.pedsnp
+indivname:       eigenstrat_input.pedind
+evecoutname:     eigenstrat_no_removal.evac
+evaloutname:     eigenstrat_no_removal.eval
+altnormstyle:    NO 
+numoutevec:      50
+familynames:     NO
+numoutlieriter:  0
+grmoutname:      eigenstrat_no_removal_relatedness

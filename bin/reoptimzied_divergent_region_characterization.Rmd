@@ -56,7 +56,7 @@ join_masks <- function(mask_file = NULL){
   
   mask_file_cluster <- data.frame(mask_file, cluster, cluster_start) %>%
     dplyr::group_by(CHROM, cluster_start) %>%
-    dplyr::mutate(cluster_size=ifelse(is.na(cluster_start), 1000, n()*1000)) %>%
+    dplyr::mutate(cluster_size=ifelse(is.na(cluster_start), 1000, dplyr::n()*1000)) %>%
     dplyr::ungroup() %>%
     dplyr::mutate(cluster_end=cluster_start+cluster_size)
   
@@ -165,7 +165,7 @@ df_div_cluster_size <- df_div_cluster %>%
   dplyr::select(-cluster_start) %>%
   dplyr::left_join(., dplyr::select(df_div_cluster_filtered, STRAIN, window_ID, cluster_start), by=c('STRAIN','window_ID')) %>%
   dplyr::group_by(STRAIN, CHROM, cluster_start) %>%
-  dplyr::mutate(cluster_size=ifelse(div_class %in% c("Pass", "N2_fp"), NA, ifelse(is.na(cluster_start), 1000, n()*1000))) %>%
+  dplyr::mutate(cluster_size=ifelse(div_class %in% c("Pass", "N2_fp"), NA, ifelse(is.na(cluster_start), 1000, dplyr::n()*1000))) %>%
   dplyr::ungroup() %>%
   dplyr::mutate(cluster_end=cluster_start+cluster_size)
 ```
@@ -257,14 +257,14 @@ df_div_cluster_gapjoined_size <- df_div_cluster_gapjoined %>%
   dplyr::select(-cluster_start) %>%
   dplyr::left_join(., dplyr::select(df_div_cluster_gapjoined_filtered, STRAIN, window_ID, cluster_start), by=c('STRAIN','window_ID')) %>%
   dplyr::group_by(STRAIN, CHROM, cluster_start) %>%
-  dplyr::mutate(cluster_size=ifelse(div_class %in% c("Pass", "N2_fp"), NA, ifelse(is.na(cluster_start), 1000, n()*1000))) %>%
+  dplyr::mutate(cluster_size=ifelse(div_class %in% c("Pass", "N2_fp"), NA, ifelse(is.na(cluster_start), 1000, dplyr::n()*1000))) %>%
   dplyr::ungroup() %>%
   dplyr::mutate(cluster_end=cluster_start+cluster_size)
 
 df_divergent_final <- df_div_cluster_gapjoined_size %>%
   dplyr::filter(cluster_size >= cluster_threshold) %>%
   dplyr::group_by(window_ID) %>%
-  dplyr::mutate(freq=n()/strain_count, mwf = ifelse(freq > 0.5, 1-freq, freq)) %>%
+  dplyr::mutate(freq=dplyr::n()/strain_count, mwf = ifelse(freq > 0.5, 1-freq, freq)) %>%
   dplyr::ungroup() %>%
   dplyr::mutate(freq_bin=ifelse(freq < 0.01, "Rare", ifelse(freq < 0.05, "Intermediate", "Common"))) %>%
   dplyr::mutate(is_count = ifelse(div_id %in% c("Count", "CountLowCoverage"), 1, 0)) %>%
@@ -300,7 +300,7 @@ nrow(dplyr::distinct(df_divergent_final, window_ID))/1e3
 df_divergent_final %>%
   dplyr::distinct(window_ID, mwf,freq_bin) %>%
   dplyr::group_by(freq_bin) %>%
-  dplyr::summarise(size=n()/1e3)
+  dplyr::summarise(size=dplyr::n()/1e3)
 
 ## divergent vs non-divergent stats
 
@@ -337,11 +337,11 @@ mean(df_div_stats_iso_div$mean_cov)
 
 df_divergent_final %>%
   dplyr::filter(STRAIN == "CB4856") %>%
-  dplyr::summarise(size=n()/1e3)
+  dplyr::summarise(size=dplyr::n()/1e3)
 
 df_divergent_final %>%
   dplyr::filter(STRAIN == "XZ1516") %>%
-  dplyr::summarise(size=n()/1e3)
+  dplyr::summarise(size=dplyr::n()/1e3)
 ```
 
 

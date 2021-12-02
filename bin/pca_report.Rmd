@@ -1,0 +1,81 @@
+---
+title: "PCA: genetic differences between strains"
+output: 
+    html_document:
+        toc: yes
+        toc_float:
+          collapsed: true
+          smooth_scroll: false
+---
+
+```{r global_options, echo = FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE)
+options(knitr.duplicate.label = 'allow')
+knitr::opts_knit$set(progress = FALSE)
+
+library(tidyverse)
+# library(ggrepel)
+# library(plotly)
+library(DT)
+library(ggtree)
+library(cowplot)
+
+# can manually edit if you want to highlight certain strains
+dstrains <- NULL
+
+```
+
+
+```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.width = 12, eval = F}
+# Tree
+
+# can manually edit if you want to highlight certain strains
+# dstrains <-  c('ECA1307', 'NIC1649', 'JU1374', 'ECA1518', 'QG2899', 
+#               'QG3818', 'QG1004', 'NIC58', 'NIC975', 'ECA1599', 'ECA797', 'NIC491')
+
+tree <- ape::read.tree("WI.20210813.hard-filter.isotype.min4.tree")
+p1 <- ggtree::ggtree(tree)
+
+id <- tree$tip.label
+
+div <- isotypes %>%
+  dplyr::select(strain) %>%
+  dplyr::mutate(divergent_set = ifelse(strain %in% dstrains, strain, 'other'))
+
+metat <- p1$data %>%
+  dplyr::inner_join(div, c('label' = 'strain'))
+
+test_color <- rainbow(14)
+test_color[12] <- "grey70"
+
+p2 <- p1 +
+  geom_point(data = metat,
+             aes(x = x,
+                 y = y,
+                 colour = divergent_set,
+                 label = label)) +
+  coord_flip() +
+  scale_x_reverse() +
+  scale_color_manual(values = test_color)
+  # scale_color_manual(values = c("FALSE" = "grey", "TRUE" = "red"))
+
+plotly::ggplotly(p2)
+
+
+```
+
+<br>
+
+```{r}
+
+out <- NULL
+for(ld in list.files("EIGESTRAT")) {
+  out <- c(out, knitr::knit_child('pca_template.Rmd'))
+}
+
+
+```
+
+`r if(!is.null(out)) { paste(knitr::knit(text = out), collapse = '\\n') }`
+
+

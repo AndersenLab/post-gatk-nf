@@ -1,0 +1,57 @@
+# `r ld`
+
+### No outlier removal
+
+**Variance Explained of PCs**
+
+```{r, fig.width = 8, fig.height = 6, echo = FALSE, message = FALSE, warning = FALSE}
+
+# how many PCs are significant?
+tracy <- data.table::fread(glue::glue("EIGESTRAT/{ld}/NO_REMOVAL/TracyWidom_statistics_no_removal.tsv")) %>%
+  dplyr::mutate(sum = sum(eigenvalue),
+                VarExp = eigenvalue/sum,
+                cumsum = cumsum(VarExp),
+                N = paste0("PC", N))
+
+DT::datatable(tracy[1:10,])
+```
+
+
+```{r}
+no_removal <- data.table::fread(glue::glue("EIGESTRAT/{ld}/NO_REMOVAL/eigenstrat_no_removal.evac"), skip = 1) %>%
+  dplyr::select(strain=V1, V2:V16) %>% 
+  dplyr::rename(PC1=V2, PC2=V3,PC3=V4, PC4=V5, PC5=V6, PC6 = V7) #%>%
+  # dplyr::left_join(., dplyr::select(WI, strain, geo), by='strain')
+
+```
+
+`r knitr::knit_child('pca_template_template2.Rmd')`
+
+<br>
+
+### With outlier removal
+
+**Variance Explained of PCs**
+
+```{r, fig.width = 8, fig.height = 6, echo = FALSE, message = FALSE, warning = FALSE}
+
+# how many PCs are significant?
+tracy <- data.table::fread(glue::glue("EIGESTRAT/{ld}/OUTLIER_REMOVAL/TracyWidom_statistics_outlier_removal.tsv")) %>%
+  dplyr::mutate(sum = sum(eigenvalue),
+                VarExp = eigenvalue/sum,
+                cumsum = cumsum(VarExp),
+                N = paste0("PC", N))
+
+DT::datatable(tracy[1:10,])
+
+```
+
+```{r}
+no_removal <- data.table::fread(glue::glue("EIGESTRAT/{ld}/OUTLIER_REMOVAL/eigenstrat_outliers_removed.evac"), skip = 1) %>%
+  dplyr::select(strain=V1, V2:V16) %>% 
+  dplyr::rename(PC1=V2, PC2=V3,PC3=V4, PC4=V5, PC5=V6, PC6 = V7) #%>%
+  # dplyr::left_join(., dplyr::select(WI, strain, geo), by='strain')
+
+```
+
+`r knitr::knit_child('pca_template_template2.Rmd')`
