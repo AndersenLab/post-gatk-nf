@@ -1,0 +1,69 @@
+```{r, fig.height = 10, fig.width = 10}
+pcs <- data.frame(first = c(rep("PC1", 5), rep("PC2", 4), rep("PC3", 3), rep("PC4", 2), rep("PC5", 1)),
+                  second = c(2,3,4,5,6,3,4,5,6,4,5,6,5,6, 6)) %>%
+  dplyr::mutate(second = paste0("PC", second))
+
+# highlight divergent strains
+if(!is.null(dstrains)) {
+  divergent <- no_removal %>%
+    dplyr::filter(strain %in% dstrains)
+  nodiv <- no_removal %>%
+    dplyr::filter(!(strain %in% dstrains))
+  
+  # generate plots
+  plots2 <- lapply(seq(1:nrow(pcs)), FUN = function(i) {
+    xpc <- pcs$first[i]
+    ypc <- pcs$second[i]
+    
+    ggplot() +
+      geom_point(data = nodiv, shape=21, alpha=0.8, size=2, aes(x=get(xpc),y=get(ypc)), fill = "grey70")+
+      geom_point(data = divergent, shape=21, alpha=0.8, size=2, aes(x=get(xpc),y=get(ypc), fill = strain))+
+      ggrepel::geom_text_repel(data=divergent,
+                      label=divergent$strain,
+                      aes(x=get(xpc),y=get(ypc)), size = 2.5, force=10, nudge_x=0.015, nudge_y=0.1,
+                      segment.size = 0.2, segment.alpha = 0.5, direction = 'both',
+                      min.segment.length = 0) +
+      theme_bw() +
+      theme(axis.title = element_text(size=11, color = "black"), 
+            axis.text = element_text(size=10, color = "black"),
+            panel.grid = element_blank(),
+            legend.position = "none")+
+      # scale_fill_manual(values = test_color[-10]) +
+    labs(x = glue::glue("{xpc} ({round(tracy$VarExp[which(tracy$N == {xpc})]*100, digits = 2)}%)"), 
+         y = glue::glue("{ypc} ({round(tracy$VarExp[which(tracy$N == {ypc})]*100, digits = 2)}%)"))
+  })
+  
+  # get legend
+  leg <- cowplot::get_legend(ggplot2::ggplot(divergent, aes(x = PC1, y = PC2, color = strain)) +     
+                               geom_point() +
+                               scale_color_manual(values = test_color[-10]) +
+                               theme(legend.position = "bottom")
+  )
+  
+cowplot::plot_grid(plotlist = plots2, leg)
+
+} else {
+  nodiv <- no_removal
+  # don't highight strains
+  plots2 <- lapply(seq(1:nrow(pcs)), FUN = function(i) {
+    xpc <- pcs$first[i]
+    ypc <- pcs$second[i]
+    print(xpc)
+    
+    ggplot() +
+      geom_point(data = nodiv, shape=21, alpha=0.8, size=2, aes(x=get(xpc),y=get(ypc)), fill = "grey70")+
+      theme_bw() +
+      theme(axis.title = element_text(size=11, color = "black"), 
+            axis.text = element_text(size=10, color = "black"),
+            panel.grid = element_blank(),
+            legend.position = "none")+
+    labs(x = glue::glue("{xpc} ({round(tracy$VarExp[which(tracy$N == {xpc})]*100, digits = 2)}%)"), 
+         y = glue::glue("{ypc} ({round(tracy$VarExp[which(tracy$N == {ypc})]*100, digits = 2)}%)"))
+  })
+  cowplot::plot_grid(plotlist = plots2)
+
+}
+
+
+
+```
