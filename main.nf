@@ -45,6 +45,7 @@ params.vcfanno_config = "${workflow.projectDir}/input_files/ANNOTATION_conf.toml
 params.eigen_par_outlier_removal = "${workflow.projectDir}/bin/eigpar"
 params.eigen_par_no_removal = "${workflow.projectDir}/bin/eigpar_no_removal"
 params.R_libpath = "/projects/b1059/software/R_lib_3.6.0"
+params.snps = '--snps-only'
 
 
 // Note that params.species is set in the config to be c_elegans (default)
@@ -127,7 +128,7 @@ if (params.help) {
 }
 
 // import the pca module
-include {extract_ancestor_bed; annotate_small_vcf; vcf_to_ped; vcf_to_eigstrat_files; run_eigenstrat_no_outlier_removal; run_eigenstrat_with_outlier_removal; HTML_report_PCA} from './modules/pca.nf'
+include {extract_ancestor_bed; annotate_small_vcf; vcf_to_eigstrat_files; run_eigenstrat_no_outlier_removal; run_eigenstrat_with_outlier_removal; HTML_report_PCA} from './modules/pca.nf'
 
 
 workflow { 
@@ -219,8 +220,8 @@ workflow {
 
         // run html report
         // not functional quite yet...
-        // run_eigenstrat_no_outlier_removal.out
-        //     .combine(run_eigenstrat_with_outlier_removal.out) | HTML_report_PCA
+         run_eigenstrat_no_outlier_removal.out
+             .combine(run_eigenstrat_with_outlier_removal.out) | HTML_report_PCA
     }
     
 }

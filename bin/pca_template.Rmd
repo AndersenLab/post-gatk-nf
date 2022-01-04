@@ -13,7 +13,9 @@ tracy <- data.table::fread(glue::glue("EIGESTRAT/{ld}/NO_REMOVAL/TracyWidom_stat
                 cumsum = cumsum(VarExp),
                 N = paste0("PC", N))
 
-DT::datatable(tracy[1:10,])
+# print(DT::datatable(tracy[1:10,]))
+tracy[1:10,]
+
 ```
 
 
@@ -42,7 +44,8 @@ tracy <- data.table::fread(glue::glue("EIGESTRAT/{ld}/OUTLIER_REMOVAL/TracyWidom
                 cumsum = cumsum(VarExp),
                 N = paste0("PC", N))
 
-DT::datatable(tracy[1:10,])
+# print(DT::datatable(tracy[1:10,]))
+tracy[1:10,]
 
 ```
 

@@ -74,6 +74,38 @@ process annotate_small_vcf {
 
 
 /*
+------------ Prune VCF, Generate PLINK files
+*/
+
+process vcf_to_ped {
+
+  tag {"PRUNING VCF FOR ADMIXTURE"}
+
+  publishDir "${params.output}/ADMIXTURE/PLINK/", mode: 'copy'
+
+  conda '/projects/b1059/software/conda_envs/vcffixup'
+
+
+  input:
+    tuple file(vcf), file(vcfindex), val(nSM), val(maf), val(samples), val(ld)
+
+  output:
+    tuple file("ce_norm.vcf.gz"), file("ce_norm.vcf.gz.tbi"), val(nSM), val(maf), val(samples), val(ld), file("*.map"), file("*.ped"), file("plink.prune.in")
+
+    """
+    bcftools norm -m +snps ${vcf} -Oz -o ce_norm.vcf.gz
+    tabix -p vcf ce_norm.vcf.gz
+
+    plink --vcf ce_norm.vcf.gz --snps-only --biallelic-only --maf ${maf} --set-missing-var-ids @:# --indep-pairwise 50 10 ${ld} --allow-extra-chr 
+    
+    plink --vcf ce_norm.vcf.gz --snps-only --biallelic-only --maf ${maf} --set-missing-var-ids @:# --extract plink.prune.in --geno --recode12 --out LD_${ld}_MAF_${maf} --allow-extra-chr 
+    """
+
+}
+
+
+
+/*
 ======================================
 ~ > *                            * < ~
 ~ ~ > *                        * < ~ ~
@@ -106,13 +138,13 @@ process vcf_to_eigstrat_files {
     """
 
     bcftools view --regions I,II,III,IV,V,X ${vcf} |\\
-    bcftools norm -m + -Oz -o ce_norm.vcf.gz
+    bcftools norm -m +snps -Oz -o ce_norm.vcf.gz
 
     tabix -p vcf ce_norm.vcf.gz
 
-    plink --vcf ce_norm.vcf.gz --biallelic-only --set-missing-var-ids @:# --indep-pairwise 50 10 ${test_ld} --allow-extra-chr 
+    plink --vcf ce_norm.vcf.gz --snps-only --biallelic-only --set-missing-var-ids @:# --indep-pairwise 50 10 ${test_ld} --allow-extra-chr 
 
-    plink --vcf ce_norm.vcf.gz --biallelic-only --set-missing-var-ids @:# --extract plink.prune.in --geno --recode12 --out eigenstrat_input --allow-extra-chr
+    plink --vcf ce_norm.vcf.gz --snps-only --biallelic-only --set-missing-var-ids @:# --extract plink.prune.in --geno --recode12 --out eigenstrat_input --allow-extra-chr
 
     awk -F":" '\$1=\$1' OFS="\\t" plink.prune.in | \\
     sort -k1,1d -k2,2n > markers.txt
@@ -120,11 +152,11 @@ process vcf_to_eigstrat_files {
     bcftools query -l ce_norm.vcf.gz |\\
     sort > sorted_samples.txt 
 
-    bcftools view -S sorted_samples.txt -R markers.txt ce_norm.vcf.gz -Oz -o PCA.vcf.gz
+    bcftools view -v snps -S sorted_samples.txt -R markers.txt ce_norm.vcf.gz -Oz -o PCA.vcf.gz
     
     tabix -p vcf PCA.vcf.gz
 
-    bcftools view -S sorted_samples.txt -R markers.txt ce_norm.vcf.gz |\\
+    bcftools view -v snps -S sorted_samples.txt -R markers.txt ce_norm.vcf.gz |\\
     bcftools query -f '%CHROM\\t%CHROM:%POS\\t%cM\\t%POS\\t%REF\\t%ALT\\n' |\\
     sed 's/^III/3/g' |\\
     sed 's/^II/2/g' |\\
