@@ -235,7 +235,9 @@ workflow {
 
 process subset_iso_ref_strains {
 
-    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+    label 'post-gatk'
+
+    // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
     memory 20.GB
     cpus 4
@@ -283,7 +285,9 @@ process subset_iso_ref_strains {
 // i know there has to be a better way to do this, but this should work. subset iso ref strains for soft filter vcf
 process subset_iso_ref_soft {
 
-    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+    label 'post-gatk'
+
+    // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
     memory 20.GB
     cpus 4
@@ -325,7 +329,9 @@ process subset_iso_ref_soft {
 
 process subset_snv {
 
-    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+    label 'post-gatk'
+
+    // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
     publishDir "${params.output}/variation", mode: 'copy'
 
@@ -350,7 +356,9 @@ process subset_snv {
 // make a small genotype only vcf for download from cendr for nemascan
 process make_small_vcf {
 
-    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+    label 'post-gatk'
+
+    // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
     publishDir "${params.output}/variation", mode: 'copy'
 
     input:
@@ -375,7 +383,9 @@ process make_small_vcf {
 
 process build_tree {
 
-    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+    label 'post-gatk'
+
+    // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
     memory { 24.GB + 10.GB * task.attempt }
     errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
@@ -409,7 +419,9 @@ process build_tree {
 
 process plot_tree {
 
-    conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
+    label 'R'
+
+    // conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
 
     publishDir "${params.output}/tree", mode: 'copy'
 
@@ -435,7 +447,9 @@ process plot_tree {
 
 process haplotype_sweep_IBD {
 
-    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+    label 'post-gatk'
+
+    // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
     publishDir "${params.output}/haplotype", mode: 'copy'
 
@@ -459,7 +473,9 @@ process haplotype_sweep_IBD {
 
 process haplotype_sweep_plot {
 
-    conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
+    label 'R'
+
+    // conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
 
     memory { 10.GB + 10.GB * task.attempt }
     errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
@@ -493,7 +509,9 @@ process haplotype_sweep_plot {
 
 process count_variant_coverage {
 
-    conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+    label 'post-gatk'
+
+    // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
     publishDir "${params.output}/divergent_regions/Mask_DF", mode: 'copy'
 
@@ -537,7 +555,9 @@ process count_variant_coverage {
 
 process define_divergent_region {
 
-    conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
+    label 'R'
+
+    // conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
 
     publishDir "${params.output}/divergent_regions", mode: 'copy'
     publishDir "${params.output}/NemaScan", pattern: 'divergent_bins.bed', mode: 'copy'
@@ -567,10 +587,12 @@ process define_divergent_region {
 
 
 process get_species_sheet {
+
+    label 'R'
     
     publishDir "${params.output}/NemaScan/", mode: 'copy'
 
-    conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
+    // conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
 
     output:
         file("strain_isotype_lookup.tsv")
