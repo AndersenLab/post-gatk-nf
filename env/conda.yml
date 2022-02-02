@@ -6,7 +6,7 @@ channels:
 dependencies:
 - bcftools=1.14=hde04aa1_1
 - bedtools=2.30.0=h7d7f7ad_2
-- bioconvert=0.4.3=py_0
+# - bioconvert=0.4.3=py_0
 - htslib=1.14=h5138463_1
 - mosdepth=0.3.2=h03814e9_1
 - plink=1.90b6.21=h779adbc_1
