@@ -274,7 +274,7 @@ process subset_iso_ref_strains {
     fi
 
     # output list of strains for divergent
-    bcftools query -l ${vcf} > div_isotype_list.txt
+    bcftools query -l \${output} > div_isotype_list.txt
 
     """
 
