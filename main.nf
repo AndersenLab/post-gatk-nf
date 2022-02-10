@@ -550,7 +550,7 @@ process define_divergent_region {
         file("*")
 
     output:
-        tuple file("divergent_regions_strain.bed"), file("divergent_regions.png")
+        tuple file("divergent_regions_strain.bed.gz"), file("divergent_regions_all.bed.gz"), file("divergent_regions.png")
 
     """
     cp ${workflow.projectDir}/bin/reoptimzied_divergent_region_characterization.Rmd reoptimzied_divergent_region_characterization.Rmd
@@ -561,6 +561,11 @@ process define_divergent_region {
     # files for NemaScan
     cp ${params.bin_bed} ./divergent_bins.bed
     cp divergent_regions_strain.bed ./divergent_df_isotype.bed
+
+    # gzip divergent files
+    gzip divergent_regions_strain.bed
+    cp All_divergent_regions.tsv divergent_regions_all.bed
+    gzip divergent_regions_all.bed
 
     """
 }

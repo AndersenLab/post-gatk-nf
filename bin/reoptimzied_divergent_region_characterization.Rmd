@@ -288,9 +288,13 @@ write.csv(df_divergent_final_isotype, file="DataS3_divergent_regions_isotypes.cs
 
 div_bed <- df_divergent_final_isotype %>% 
   dplyr::select(CHROM, cluster_start, cluster_end, STRAIN) %>% 
-  dplyr::arrange(CHROM, cluster_start) 
+  dplyr::arrange(CHROM, cluster_start) %>%
+  dplyr::mutate(cluster_start = as.numeric(cluster_start),
+                cluster_end = as.numeric(cluster_end))
 
-write.table(div_bed, "divergent_regions_strain.bed", quote=F, col.names = F, row.names=F, sep="\t")
+# write.table(div_bed, "divergent_regions_strain.bed", quote=F, col.names = F, row.names=F, sep="\t")
+# see if this avoids the errors with 1.4e+07...
+readr::write_tsv(div_bed, "divergent_regions_strain.bed", col_names = F)
 
 ## total size
 
@@ -374,6 +378,7 @@ df_div_all <- df_divergent_final %>%
   dplyr::arrange(., chr, start)
 
 readr::write_tsv(df_div_all, "All_divergent_regions.tsv")
+readr::write_tsv(df_div_all, "divergent_regions_all.bed")
 
 ## clustered
 
