@@ -1,0 +1,32 @@
+# Build dockerfile on change
+name: Build Docker (env/pca.Dockerfile)
+
+on:
+  push:
+    paths:
+    - 'env/pca.Dockerfile'
+    - '.github/workflows/build_pca_docker.yml'
+  pull_request:
+    paths:
+    - 'env/pca.Dockerfile'
+    - '.github/workflows/build_pca_docker.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    # Build Tools
+    - name: Build and Publish
+      uses: elgohr/Publish-Docker-Github-Action@master
+      with:
+        name: andersenlab/pca
+        tag: "${{ steps.current-time.formattedTime }}"
+        username: ${{ secrets.KSE_DOCKER_USER }}
+        password: ${{ secrets.KSE_DOCKER_PASS }}
+        snapshot: true
+        dockerfile: pca.Dockerfile
+        workdir: "env"
+        tags: "latest"
+        cache: true

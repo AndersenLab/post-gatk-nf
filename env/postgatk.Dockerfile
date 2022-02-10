@@ -10,6 +10,7 @@ RUN conda install -c bioconda plink=1.90b6.21
 RUN conda install -c bioconda quicktree=2.5
 # RUN conda install -c bioconda samtools
 RUN conda install -c bioconda vcflib
+RUN conda install -c bioconda vcfanno
 # RUN conda install -c bioconda eigensoft
 # RUN conda install -c bioconda bioconvert
 
