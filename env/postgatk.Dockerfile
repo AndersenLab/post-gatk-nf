@@ -1,8 +1,8 @@
 FROM continuumio/miniconda
 MAINTAINER Katie Evans <kathryn.evans@northwestern.edu>
 
-COPY ugh_conda.yml .
-RUN conda env update -n root -f ugh_conda.yml && conda clean -a
+COPY conda.yml .
+RUN conda env update -n root -f conda.yml && conda clean -a
 
 RUN conda install -c bioconda bedtools=2.30.0
 RUN conda install -c bioconda mosdepth=0.3.2
