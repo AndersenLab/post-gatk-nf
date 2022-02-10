@@ -58,6 +58,6 @@ dependencies:
 - wheel=0.37.1=pyhd8ed1ab_0
 - xz=5.2.5=h516909a_1
 - zlib=1.2.11=h36c2ea0_1013
+- eigensoft=7.2.1=h7f93715_4
 # - libgfortran=3.0.0=1
 # - openblas=0.2.19=0
-- eigensoft=7.2.1=h7f93715_4
