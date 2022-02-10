@@ -8,7 +8,7 @@ on:
     - '.github/workflows/build_postgatk_docker.yml'
   pull_request:
     paths:
-    - 'env/trim-fq.Dockerfile'
+    - 'env/postgatk.Dockerfile'
     - '.github/workflows/build_postgatk_docker.yml'
 
 jobs:
