@@ -21,7 +21,8 @@ tracy[1:10,]
 
 ```{r}
 no_removal <- data.table::fread(glue::glue("EIGESTRAT/{ld}/NO_REMOVAL/eigenstrat_no_removal.evac"), skip = 1) %>%
-  dplyr::select(strain=V1, V2:V16) %>% 
+  dplyr::rename(strain = V1) %>%
+  # dplyr::select(strain=V1, V2:V16) %>% 
   dplyr::rename(PC1=V2, PC2=V3,PC3=V4, PC4=V5, PC5=V6, PC6 = V7) #%>%
   # dplyr::left_join(., dplyr::select(WI, strain, geo), by='strain')
 
@@ -51,7 +52,8 @@ tracy[1:10,]
 
 ```{r}
 no_removal <- data.table::fread(glue::glue("EIGESTRAT/{ld}/OUTLIER_REMOVAL/eigenstrat_outliers_removed.evac"), skip = 1) %>%
-  dplyr::select(strain=V1, V2:V16) %>% 
+  dplyr::rename(strain = V1) %>%
+  # dplyr::select(strain=V1, V2:V16) %>% 
   dplyr::rename(PC1=V2, PC2=V3,PC3=V4, PC4=V5, PC5=V6, PC6 = V7) #%>%
   # dplyr::left_join(., dplyr::select(WI, strain, geo), by='strain')
 

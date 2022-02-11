@@ -240,16 +240,19 @@ process HTML_report_PCA {
 
 
   output:
-   tuple file("pca*.Rmd"), file("*.html")
+   tuple file("pca_report.Rmd"), file('pca_template.Rmd'), file('pca_template_template2.Rmd'), file("*.html")
 
 
   """
   cp ${workflow.projectDir}/bin/pca*.Rmd . 
-  echo ".libPaths(c(\\"${params.R_libpath}\\", .libPaths() ))" > .Rprofile
+  cp ${workflow.projectDir}/bin/pca*.Rmd ${workflow.launchDir}/${params.output}/
   Rscript -e "rmarkdown::render('pca_report.Rmd', knit_root_dir='${workflow.launchDir}/${params.output}')"
   """
 
 
 }
+
+//  cat pca_report.Rmd | sed 's+pca_template.Rmd+${workflow.projectDir}/bin/pca_template.Rmd+' > new_pca_report.Rmd
+
 
 

@@ -582,7 +582,8 @@ process define_divergent_region {
     publishDir "${params.output}/NemaScan", pattern: 'divergent_df_isotype.bed', mode: 'copy'
 
     memory { 128.GB + 20.GB * task.attempt }
-    errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
+    // errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
+    errorStrategy 'ignore'
 
     input:
         file("*")
