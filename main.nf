@@ -164,7 +164,7 @@ workflow {
         subset_iso_ref_strains.out.vcf | subset_snv
 
         // build tree
-        input_vcf.combine(input_vcf_index).concat(subset_iso_ref_strains.out.vcf) | build_tree | plot_tree
+        input_vcf.combine(input_vcf_index).concat(subset_iso_ref_strains.out.vcf) | convert_tree | quick_tree | plot_tree
 
         // haplotype
         subset_iso_ref_strains.out.vcf.combine(contigs) | haplotype_sweep_IBD
@@ -235,7 +235,7 @@ workflow {
 
 process subset_iso_ref_strains {
 
-    label 'post-gatk'
+    label 'postgatk'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
@@ -285,7 +285,7 @@ process subset_iso_ref_strains {
 // i know there has to be a better way to do this, but this should work. subset iso ref strains for soft filter vcf
 process subset_iso_ref_soft {
 
-    label 'post-gatk'
+    label 'postgatk'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
@@ -329,7 +329,7 @@ process subset_iso_ref_soft {
 
 process subset_snv {
 
-    label 'post-gatk'
+    label 'postgatk'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
@@ -356,7 +356,7 @@ process subset_snv {
 // make a small genotype only vcf for download from cendr for nemascan
 process make_small_vcf {
 
-    label 'post-gatk'
+    label 'postgatk'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
     publishDir "${params.output}/variation", mode: 'copy'
@@ -384,7 +384,7 @@ process make_small_vcf {
 process convert_tree {
 
     // label 'tree'
-    container 'bioconvert/bioconvert:latest'
+    container 'shub://bioconvert/bioconvert:latest'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
@@ -395,7 +395,7 @@ process convert_tree {
         tuple file(vcf), file(vcf_index)
 
     output:
-        file("*.tree")
+        file("*.stockholm")
 
 """
 
@@ -465,7 +465,7 @@ process plot_tree {
 
 process haplotype_sweep_IBD {
 
-    label 'post-gatk'
+    label 'postgatk'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
@@ -527,7 +527,7 @@ process haplotype_sweep_plot {
 
 process count_variant_coverage {
 
-    label 'post-gatk'
+    label 'postgatk'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
