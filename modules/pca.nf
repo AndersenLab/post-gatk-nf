@@ -15,7 +15,7 @@
 
 process extract_ancestor_bed {
 
-    label 'post-gatk'
+    label 'postgatk'
 
     publishDir "${params.output}/ANNOTATE_VCF", mode: 'copy'
 
@@ -46,7 +46,7 @@ process annotate_small_vcf {
 
     publishDir "${params.output}/ANNOTATE_VCF", mode: 'copy'
 
-    label 'post-gatk'
+    label 'postgatk'
 
     // conda '/projects/b1059/software/conda_envs/vcffixup'
 
@@ -95,7 +95,7 @@ process vcf_to_eigstrat_files {
 
   tag {"PREPARE EIGENSTRAT FILES"}
 
-  label 'post-gatk'
+  label 'postgatk'
 
   // conda '/projects/b1059/software/conda_envs/vcffixup'
 
@@ -191,7 +191,7 @@ process run_eigenstrat_with_outlier_removal {
 
   // conda '/projects/b1059/software/conda_envs/vcffixup'
 
-  label 'post-gatk'
+  label 'pca'
 
   publishDir "${params.output}/EIGESTRAT/LD_${test_ld}/OUTLIER_REMOVAL/", mode: 'copy'
 
