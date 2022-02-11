@@ -303,8 +303,9 @@ ggplot(plot_df,
     facet_grid(.~chromosome, scales="free", space="free") +
     theme(legend.position="none")
 
-ggsave("haplotype.pdf", height = 48, width = 24)
-ggsave("haplotype3.pdf", height = 70, width = 35, limitsize = FALSE)
+# might need to make longer with more strains...
+ggsave("haplotype.pdf", height = 70, width = 35, limitsize = FALSE)
+ggsave("haplotype.png", height = 70, width = 35, limitsize = FALSE)
 
 
 
@@ -332,7 +333,7 @@ ggplot(plot_df,
     facet_grid(.~chromosome, scales="free", space="free") +
     theme(legend.position="none")
 
-ggsave(paste("max_haplotype_genome_wide.pdf"),
+ggsave(paste("sweep.pdf"),
        height = 70, width = 35, limitsize = FALSE)
 
 #===============#
