@@ -155,7 +155,7 @@ process run_eigenstrat_no_outlier_removal {
 
   publishDir "${params.output}/EIGESTRAT/LD_${test_ld}/NO_REMOVAL/", mode: 'copy'
 
-  label 'post-gatk'
+  label 'pca'
 
   // conda '/projects/b1059/software/conda_envs/vcffixup'
 

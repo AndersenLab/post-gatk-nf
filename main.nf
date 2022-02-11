@@ -381,15 +381,15 @@ process make_small_vcf {
     ==================
 */
 
-process build_tree {
+process convert_tree {
 
-    label 'post-gatk'
+    // label 'tree'
+    container 'bioconvert/bioconvert:latest'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
     memory { 24.GB + 10.GB * task.attempt }
     errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
-    publishDir "${params.output}/tree", mode: 'copy'
 
     input:
         tuple file(vcf), file(vcf_index)
@@ -403,16 +403,34 @@ process build_tree {
 
     output_stockholm=`echo \${output_phylip} | sed 's/.phy/.stockholm/'`
 
-    output_tree=`echo \${output_phylip} | sed 's/.phy/.tree/'`
-
-
     python ${workflow.projectDir}/bin/vcf2phylip.py -i ${vcf}
 
     bioconvert phylip2stockholm \${output_phylip}
 
-    quicktree -in a -out t \${output_stockholm} > \${output_tree}
-
 """
+
+}
+
+process quick_tree {
+
+    label 'tree'
+
+    memory { 24.GB + 10.GB * task.attempt }
+    errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
+    publishDir "${params.output}/tree", mode: 'copy'
+
+    input:
+        file(stockholm)
+
+    output:
+        file("*.tree")
+
+    """
+    output_tree=`echo ${stockholm} | sed 's/.stockholm/.tree/'`
+
+    quicktree -in a -out t ${stockholm} > \${output_tree}
+
+    """
 
 }
 
