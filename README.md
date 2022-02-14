@@ -102,8 +102,7 @@ A custom sample sheet can be specified using `--sample_sheet`. The `sample sheet
 
 Remember that in `--debug` mode the pipeline will use the sample sheet located in `test_data/sample_sheet.tsv`.
 
-!!! Important
-    There is no header for the sample sheet!
+*Important: There is no header for the sample sheet!*
 
 The `sample sheet` has the following columns:
 
@@ -111,16 +110,14 @@ The `sample sheet` has the following columns:
 * __bam__ - name of the bam alignment file
 * __bai__ - name of the bam alignment index file
 
-!!! Note
-    As of 20210501, bam and bam.bai files for all strains of a particular species can be found in one singular location: `/projects/b1059/data/{species}/WI/alignments/` so there is no longer need to provide the location of the bam files.
+*Note: As of 20210501, bam and bam.bai files for all strains of a particular species can be found in one singular location: `/projects/b1059/data/{species}/WI/alignments/` so there is no longer need to provide the location of the bam files.*
 
 
 ## --vcf_folder
 
 Path to the **folder** containing both the hard-filtered and soft-filtered vcf outputs from [`wi-gatk`](https://github.com/AndersenLab/wi-gatk). VCF should contain **ALL** strains, the first step will be to subset isotype reference strains for further analysis.
 
-!!! Note
-    This should be the **path to the folder**, we want to isotype-subset both hard and soft filtered VCFs. For example: `--vcf_folder /projects/b1059/projects/Katie/wi-gatk/WI-20210121/variation/` or `--vcf_folder /projects/b1059/data/c_elegans/WI/variation/20210121/vcf/`
+*Note: This should be the **path to the folder**, we want to isotype-subset both hard and soft filtered VCFs. For example: `--vcf_folder /projects/b1059/projects/Katie/wi-gatk/WI-20210121/variation/` or `--vcf_folder /projects/b1059/data/c_elegans/WI/variation/20210121/vcf/`*
 
 ### --species (optional)
 
@@ -141,8 +138,7 @@ Strain list to filter VCF for PCA analysis. No header:
 | CB4856 |
 | ECA788 |
 
-!!!Note
-    If you run the standard profile with pca this file will be automatically generated to include all isotypes.
+*Note: If you run the standard profile with pca this file will be automatically generated to include all isotypes.*
 
 ### --eigen_ld (pca)
 
