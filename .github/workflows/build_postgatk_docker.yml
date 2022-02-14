@@ -1,0 +1,32 @@
+# Build dockerfile on change
+name: Build Docker (env/postgatk.Dockerfile)
+
+on:
+  push:
+    paths:
+    - 'env/postgatk.Dockerfile'
+    - '.github/workflows/build_postgatk_docker.yml'
+  pull_request:
+    paths:
+    - 'env/postgatk.Dockerfile'
+    - '.github/workflows/build_postgatk_docker.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    # Build Tools
+    - name: Build and Publish
+      uses: elgohr/Publish-Docker-Github-Action@master
+      with:
+        name: andersenlab/postgatk
+        tag: "${{ steps.current-time.formattedTime }}"
+        username: ${{ secrets.KSE_DOCKER_USER }}
+        password: ${{ secrets.KSE_DOCKER_PASS }}
+        snapshot: true
+        dockerfile: postgatk.Dockerfile
+        workdir: "env"
+        tags: "latest"
+        cache: true

@@ -1,0 +1,9 @@
+name: postgatk
+channels:
+- r
+- defaults
+- conda-forge
+- bioconda
+dependencies:
+  - python=3.10.2
+  - bcftools=1.14

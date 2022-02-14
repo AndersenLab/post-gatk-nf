@@ -15,6 +15,8 @@
 
 process extract_ancestor_bed {
 
+    label 'postgatk'
+
     publishDir "${params.output}/ANNOTATE_VCF", mode: 'copy'
 
     cpus 1
@@ -44,7 +46,9 @@ process annotate_small_vcf {
 
     publishDir "${params.output}/ANNOTATE_VCF", mode: 'copy'
 
-    conda '/projects/b1059/software/conda_envs/vcffixup'
+    label 'postgatk'
+
+    // conda '/projects/b1059/software/conda_envs/vcffixup'
 
     cpus 1
 
@@ -91,7 +95,9 @@ process vcf_to_eigstrat_files {
 
   tag {"PREPARE EIGENSTRAT FILES"}
 
-  conda '/projects/b1059/software/conda_envs/vcffixup'
+  label 'postgatk'
+
+  // conda '/projects/b1059/software/conda_envs/vcffixup'
 
   publishDir "${params.output}/EIGESTRAT/LD_${test_ld}/INPUTFILES", mode: 'copy'
 
@@ -149,7 +155,9 @@ process run_eigenstrat_no_outlier_removal {
 
   publishDir "${params.output}/EIGESTRAT/LD_${test_ld}/NO_REMOVAL/", mode: 'copy'
 
-  conda '/projects/b1059/software/conda_envs/vcffixup'
+  label 'pca'
+
+  // conda '/projects/b1059/software/conda_envs/vcffixup'
 
   input:
     tuple file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
@@ -181,7 +189,9 @@ process run_eigenstrat_no_outlier_removal {
 
 process run_eigenstrat_with_outlier_removal {
 
-  conda '/projects/b1059/software/conda_envs/vcffixup'
+  // conda '/projects/b1059/software/conda_envs/vcffixup'
+
+  label 'pca'
 
   publishDir "${params.output}/EIGESTRAT/LD_${test_ld}/OUTLIER_REMOVAL/", mode: 'copy'
 
@@ -215,7 +225,9 @@ process run_eigenstrat_with_outlier_removal {
 
 process HTML_report_PCA {
 
-  conda '/projects/b1059/software/conda_envs/cegwas2-nf_env'
+  label 'R'
+
+  // conda '/projects/b1059/software/conda_envs/cegwas2-nf_env'
 
   publishDir "${params.output}/", mode: 'copy'
 
@@ -228,16 +240,19 @@ process HTML_report_PCA {
 
 
   output:
-   tuple file("pca*.Rmd"), file("*.html")
+   tuple file("pca_report.Rmd"), file('pca_template.Rmd'), file('pca_template_template2.Rmd'), file("*.html")
 
 
   """
   cp ${workflow.projectDir}/bin/pca*.Rmd . 
-  echo ".libPaths(c(\\"${params.R_libpath}\\", .libPaths() ))" > .Rprofile
+  cp ${workflow.projectDir}/bin/pca*.Rmd ${workflow.launchDir}/${params.output}/
   Rscript -e "rmarkdown::render('pca_report.Rmd', knit_root_dir='${workflow.launchDir}/${params.output}')"
   """
 
 
 }
+
+//  cat pca_report.Rmd | sed 's+pca_template.Rmd+${workflow.projectDir}/bin/pca_template.Rmd+' > new_pca_report.Rmd
+
 
 
