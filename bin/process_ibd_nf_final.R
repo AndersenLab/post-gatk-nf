@@ -1,7 +1,10 @@
 # load packages required for processing
 library(data.table)
 library(plyr)
-library(tidyverse)
+library(dplyr)
+library(readr)
+library(tidyr)
+# library(tidyverse)
 library(igraph)
 
 #works, returns an intervals object, output goes to make.graphs
