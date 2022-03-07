@@ -1,4 +1,4 @@
-![Build Docker (env/postgatk.Dockerfile)](https://github.com/AndersenLab/postgatk-nf/workflows/Build%20Docker%20(env/postgatk.Dockerfile)/badge.svg) ![Build Docker (env/pca.Dockerfile)](https://github.com/AndersenLab/postgatk-nf/workflows/Build%20Docker%20(env/pca.Dockerfile)/badge.svg) ![Build Docker (env/tree.Dockerfile)](https://github.com/AndersenLab/postgatk-nf/workflows/Build%20Docker%20(env/tree.Dockerfile)/badge.svg)
+![Build Docker (env/postgatk.Dockerfile)](https://github.com/AndersenLab/post-gatk-nf/workflows/Build%20Docker%20(env/postgatk.Dockerfile)/badge.svg) ![Build Docker (env/pca.Dockerfile)](https://github.com/AndersenLab/post-gatk-nf/workflows/Build%20Docker%20(env/pca.Dockerfile)/badge.svg) ![Build Docker (env/tree.Dockerfile)](https://github.com/AndersenLab/post-gatk-nf/workflows/Build%20Docker%20(env/tree.Dockerfile)/badge.svg)
 
 
 # post-gatk-nf
