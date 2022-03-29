@@ -1,3 +1,6 @@
+![Build Docker (env/postgatk.Dockerfile)](https://github.com/AndersenLab/post-gatk-nf/workflows/Build%20Docker%20(env/postgatk.Dockerfile)/badge.svg) ![Build Docker (env/pca.Dockerfile)](https://github.com/AndersenLab/post-gatk-nf/workflows/Build%20Docker%20(env/pca.Dockerfile)/badge.svg) ![Build Docker (env/tree.Dockerfile)](https://github.com/AndersenLab/post-gatk-nf/workflows/Build%20Docker%20(env/tree.Dockerfile)/badge.svg)
+
+
 # post-gatk-nf
 
 This pipeline performs population genetics analyses (such as identifying shared haplotypes and divergent regions) at the isotype level. The VCFs output from this pipeline are used within the lab and also released to the world via CeNDR.
