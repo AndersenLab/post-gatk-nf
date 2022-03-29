@@ -557,8 +557,12 @@ process count_variant_coverage {
 
     bedtools coverage -a ${params.bin_bed} -b stdin -counts > \${isotype_name}_variant_counts.txt
 
+    # need to link to file since it is not a channel
+    ln -s ${params.bam_folder}/${bam}
+    ln -s ${params.bam_folder}/${bam}.bai
+
     # need to use the isotype ref strain here, not the isotype strain!
-    mosdepth -b ${params.bin_bed} \${isotype_name} ${params.bam_folder}/${bam}
+    mosdepth -b ${params.bin_bed} \${isotype_name} ${bam}
 
     gunzip \${isotype_name}.regions.bed.gz
 
