@@ -105,8 +105,8 @@ process vcf_to_eigstrat_files {
     tuple file(vcf), file(vcfindex), val("test_ld")
 
   output:
-    tuple file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
-    file ("markers.txt"), file ("sorted_samples.txt"), file ("PCA.vcf.gz"), file ("PCA.vcf.gz.tbi"), val(test_ld)
+    tuple val(test_ld), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
+    file ("markers.txt"), file ("sorted_samples.txt"), file ("PCA.vcf.gz"), file ("PCA.vcf.gz.tbi")
 
 
     """
@@ -160,11 +160,11 @@ process run_eigenstrat_no_outlier_removal {
   // conda '/projects/b1059/software/conda_envs/vcffixup'
 
   input:
-    tuple file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
-    file ("markers.txt"), file ("sorted_samples.txt"), file ("PCA.vcf.gz"), file ("PCA.vcf.gz.tbi"), val(test_ld), file(eigenparameters)
+    tuple val("ld"), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
+    file ("markers.txt"), file ("sorted_samples.txt"), file ("PCA.vcf.gz"), file ("PCA.vcf.gz.tbi"), file(eigenparameters)
 
   output:
-    tuple file("eigenstrat_no_removal.evac"), file("eigenstrat_no_removal.eval"), file("logfile_no_removal.txt"), \
+    tuple val(ld), file("eigenstrat_no_removal.evac"), file("eigenstrat_no_removal.eval"), file("logfile_no_removal.txt"), \
     file("eigenstrat_no_removal_relatedness"), file("eigenstrat_no_removal_relatedness.id"), file("TracyWidom_statistics_no_removal.tsv")
 
 
@@ -196,11 +196,11 @@ process run_eigenstrat_with_outlier_removal {
   publishDir "${params.output}/EIGESTRAT/LD_${test_ld}/OUTLIER_REMOVAL/", mode: 'copy'
 
   input:
-    tuple file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
-    file ("markers.txt"), file ("sorted_samples.txt"), file ("PCA.vcf.gz"), file ("PCA.vcf.gz.tbi"), val(test_ld), file(eigenparameters)
+    tuple val("ld"), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
+    file ("markers.txt"), file ("sorted_samples.txt"), file ("PCA.vcf.gz"), file ("PCA.vcf.gz.tbi"), file(eigenparameters)
 
   output:
-    tuple file("eigenstrat_outliers_removed.evac"), file("eigenstrat_outliers_removed.eval"), file("logfile_outlier.txt"), \
+    tuple val(ld), file("eigenstrat_outliers_removed.evac"), file("eigenstrat_outliers_removed.eval"), file("logfile_outlier.txt"), \
     file("eigenstrat_outliers_removed_relatedness"), file("eigenstrat_outliers_removed_relatedness.id"), file("TracyWidom_statistics_outlier_removal.tsv")
 
    
@@ -233,20 +233,25 @@ process HTML_report_PCA {
 
 
   input:
-  tuple file("eigenstrat_no_removal.evac"), file("eigenstrat_no_removal.eval"), file("logfile_no_removal.txt"), \
+  tuple val("ld"), file("eigenstrat_no_removal.evac"), file("eigenstrat_no_removal.eval"), file("logfile_no_removal.txt"), \
     file("eigenstrat_no_removal_relatedness"), file("eigenstrat_no_removal_relatedness.id"), file("TracyWidom_statistics_no_removal.tsv"), \
     file("eigenstrat_outliers_removed.evac"), file("eigenstrat_outliers_removed.eval"), file("logfile_outlier.txt"), \
-    file("eigenstrat_outliers_removed_relatedness"), file("eigenstrat_outliers_removed_relatedness.id"), file("TracyWidom_statistics_outlier_removal.tsv")
+    file("eigenstrat_outliers_removed_relatedness"), file("eigenstrat_outliers_removed_relatedness.id"), \
+    file("TracyWidom_statistics_outlier_removal.tsv"), file(pca_report), file(pca_template)
 
 
   output:
-   tuple file("pca_report.Rmd"), file('pca_template.Rmd'), file('pca_template_template2.Rmd'), file("*.html")
+   tuple file("pca_report.Rmd"), file('pca_template.Rmd'), file("*.html")
 
 
   """
-  cp ${workflow.projectDir}/bin/pca*.Rmd . 
-  cp ${workflow.projectDir}/bin/pca*.Rmd ${workflow.launchDir}/${params.output}/
-  Rscript -e "rmarkdown::render('pca_report.Rmd', knit_root_dir='${workflow.launchDir}/${params.output}')"
+  # prepare for report
+  cat ${pca_report} | \\
+  sed "s+LD_VALUE+${ld}+" | \\
+  sed "s+EIGESTRAT/{ld}/NO_REMOVAL/++g" | \\
+  sed "s+EIGESTRAT/{ld}/OUTLIER_REMOVAL/++g" > pca_report_LD_${ld}.Rmd
+
+  Rscript -e "rmarkdown::render('pca_report_LD_${ld}.Rmd')"
   """
 
 

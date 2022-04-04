@@ -395,9 +395,7 @@ process define_divergent_region {
     cp divergent_regions_strain.bed ./divergent_df_isotype.bed
 
     # gzip divergent files
-    gzip divergent_regions_strain.bed
     cp All_divergent_regions.tsv divergent_regions_all.bed
-    gzip divergent_regions_all.bed
 
     """
 }

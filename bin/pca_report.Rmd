@@ -21,7 +21,8 @@ library(glue)
 # library(ggrepel)
 # library(plotly)
 library(DT)
-library(ggtree)
+library(ggplot2)
+# library(ggtree)
 library(cowplot)
 
 # can manually edit if you want to highlight certain strains
@@ -30,56 +31,65 @@ dstrains <- NULL
 ```
 
 
-```{r, echo = FALSE, message = FALSE, warning = FALSE, fig.width = 12, eval = F}
-# Tree
+# LD_VALUE
 
-# can manually edit if you want to highlight certain strains
-# dstrains <-  c('ECA1307', 'NIC1649', 'JU1374', 'ECA1518', 'QG2899', 
-#               'QG3818', 'QG1004', 'NIC58', 'NIC975', 'ECA1599', 'ECA797', 'NIC491')
+### No outlier removal
 
-tree <- ape::read.tree("WI.20210813.hard-filter.isotype.min4.tree")
-p1 <- ggtree::ggtree(tree)
+**Variance Explained of PCs**
 
-id <- tree$tip.label
+```{r, fig.width = 8, fig.height = 6, echo = FALSE, message = FALSE, warning = FALSE}
 
-div <- isotypes %>%
-  dplyr::select(strain) %>%
-  dplyr::mutate(divergent_set = ifelse(strain %in% dstrains, strain, 'other'))
+# how many PCs are significant?
+tracy <- data.table::fread(glue::glue("EIGESTRAT/{ld}/NO_REMOVAL/TracyWidom_statistics_no_removal.tsv")) %>%
+  dplyr::mutate(sum = sum(eigenvalue),
+                VarExp = eigenvalue/sum,
+                cumsum = cumsum(VarExp),
+                N = paste0("PC", N))
 
-metat <- p1$data %>%
-  dplyr::inner_join(div, c('label' = 'strain'))
-
-test_color <- rainbow(14)
-test_color[12] <- "grey70"
-
-p2 <- p1 +
-  geom_point(data = metat,
-             aes(x = x,
-                 y = y,
-                 colour = divergent_set,
-                 label = label)) +
-  coord_flip() +
-  scale_x_reverse() +
-  scale_color_manual(values = test_color)
-  # scale_color_manual(values = c("FALSE" = "grey", "TRUE" = "red"))
-
-plotly::ggplotly(p2)
-
+# print(DT::datatable(tracy[1:10,]))
+tracy[1:10,]
 
 ```
+
+
+```{r}
+no_removal <- data.table::fread(glue::glue("EIGESTRAT/{ld}/NO_REMOVAL/eigenstrat_no_removal.evac"), skip = 1) %>%
+  dplyr::rename(strain = V1) %>%
+  # dplyr::select(strain=V1, V2:V16) %>% 
+  dplyr::rename(PC1=V2, PC2=V3,PC3=V4, PC4=V5, PC5=V6, PC6 = V7) #%>%
+  # dplyr::left_join(., dplyr::select(WI, strain, geo), by='strain')
+
+```
+
+`r knitr::knit_child('pca_template.Rmd')`
 
 <br>
 
-```{r}
+### With outlier removal
 
-out <- NULL
-for(ld in list.files("EIGESTRAT")) {
-  out <- c(out, knitr::knit_child('pca_template.Rmd'))
-}
+**Variance Explained of PCs**
 
+```{r, fig.width = 8, fig.height = 6, echo = FALSE, message = FALSE, warning = FALSE}
+
+# how many PCs are significant?
+tracy <- data.table::fread(glue::glue("EIGESTRAT/{ld}/OUTLIER_REMOVAL/TracyWidom_statistics_outlier_removal.tsv")) %>%
+  dplyr::mutate(sum = sum(eigenvalue),
+                VarExp = eigenvalue/sum,
+                cumsum = cumsum(VarExp),
+                N = paste0("PC", N))
+
+# print(DT::datatable(tracy[1:10,]))
+tracy[1:10,]
 
 ```
 
-`r if(!is.null(out)) { paste(knitr::knit(text = out), collapse = '\\n') }`
+```{r}
+no_removal <- data.table::fread(glue::glue("EIGESTRAT/{ld}/OUTLIER_REMOVAL/eigenstrat_outliers_removed.evac"), skip = 1) %>%
+  dplyr::rename(strain = V1) %>%
+  # dplyr::select(strain=V1, V2:V16) %>% 
+  dplyr::rename(PC1=V2, PC2=V3,PC3=V4, PC4=V5, PC5=V6, PC6 = V7) #%>%
+  # dplyr::left_join(., dplyr::select(WI, strain, geo), by='strain')
 
+```
 
+`r knitr::knit_child('pca_template.Rmd')`

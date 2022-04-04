@@ -99,6 +99,14 @@ nextflow run andersenlab/post-gatk-nf --debug -resume
 
 Using `--debug` will automatically set the sample sheet to `test_data/sample_sheet.tsv`
 
+### Debugging for PCA:
+
+You can debug the PCA pipeline with the following data/command:
+
+```
+nextflow run main.nf --vcf ./test_data/WI.20220404.hard-filter.vcf.gz --species c_elegans --sample_sheet ./test_data/sample_sheet_2.tsv --eigen_ld 0.8,0.6 --anc XZ2019 --pca -resume
+```
+
 ## --sample_sheet
 
 A custom sample sheet can be specified using `--sample_sheet`. The `sample sheet` is generated from the sample sheet used as input for [`wi-gatk-nf`](https://github.com/AndersenLab/wi-gatk) with only columns for strain, bam, and bai subsetted. **Make sure to remove any strains that you do not want to include in this analysis.** (*i.e. subset to keep only ISOTYPE strains*)

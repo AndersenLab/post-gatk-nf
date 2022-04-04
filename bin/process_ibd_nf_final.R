@@ -4,6 +4,7 @@ library(plyr)
 library(dplyr)
 library(readr)
 library(tidyr)
+library(ggplot2)
 # library(tidyverse)
 library(igraph)
 

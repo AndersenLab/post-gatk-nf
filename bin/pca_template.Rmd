@@ -1,62 +1,64 @@
-# `r ld`
-
-### No outlier removal
-
-**Variance Explained of PCs**
-
-```{r, fig.width = 8, fig.height = 6, echo = FALSE, message = FALSE, warning = FALSE}
-
-# how many PCs are significant?
-tracy <- data.table::fread(glue::glue("EIGESTRAT/{ld}/NO_REMOVAL/TracyWidom_statistics_no_removal.tsv")) %>%
-  dplyr::mutate(sum = sum(eigenvalue),
-                VarExp = eigenvalue/sum,
-                cumsum = cumsum(VarExp),
-                N = paste0("PC", N))
-
-# print(DT::datatable(tracy[1:10,]))
-tracy[1:10,]
-
+```{r, fig.height = 10, fig.width = 10}
+pcs <- data.frame(first = c(rep("PC1", 5), rep("PC2", 4), rep("PC3", 3), rep("PC4", 2), rep("PC5", 1)),
+                  second = c(2,3,4,5,6,3,4,5,6,4,5,6,5,6, 6)) %>%
+  dplyr::mutate(second = paste0("PC", second)) %>%
+  dplyr::mutate(first = as.character(first),
+                second = as.character(second))
+# highlight divergent strains
+if(!is.null(dstrains)) {
+  divergent <- no_removal %>%
+    dplyr::filter(strain %in% dstrains)
+  nodiv <- no_removal %>%
+    dplyr::filter(!(strain %in% dstrains))
+  
+  # generate plots
+  plots2 <- lapply(seq(1:nrow(pcs)), FUN = function(i) {
+    xpc <- pcs$first[i]
+    ypc <- pcs$second[i]
+    
+    ggplot() +
+      geom_point(data = nodiv, shape=21, alpha=0.8, size=2, aes(x=get(xpc),y=get(ypc)), fill = "grey70")+
+      geom_point(data = divergent, shape=21, alpha=0.8, size=2, aes(x=get(xpc),y=get(ypc), fill = strain))+
+      ggrepel::geom_text_repel(data=divergent,
+                      label=divergent$strain,
+                      aes(x=get(xpc),y=get(ypc)), size = 2.5, force=10, nudge_x=0.015, nudge_y=0.1,
+                      segment.size = 0.2, segment.alpha = 0.5, direction = 'both',
+                      min.segment.length = 0) +
+      theme_bw() +
+      theme(axis.title = element_text(size=11, color = "black"), 
+            axis.text = element_text(size=10, color = "black"),
+            panel.grid = element_blank(),
+            legend.position = "none")+
+      # scale_fill_manual(values = test_color[-10]) +
+    labs(x = glue::glue("{xpc} ({round(tracy$VarExp[which(tracy$N == {xpc})]*100, digits = 2)}%)"), 
+         y = glue::glue("{ypc} ({round(tracy$VarExp[which(tracy$N == {ypc})]*100, digits = 2)}%)"))
+  })
+  
+  # get legend
+  leg <- cowplot::get_legend(ggplot2::ggplot(divergent, aes(x = PC1, y = PC2, color = strain)) +     
+                               geom_point() +
+                               scale_color_manual(values = test_color[-10]) +
+                               theme(legend.position = "bottom")
+  )
+  
+cowplot::plot_grid(plotlist = plots2, leg)
+} else {
+  nodiv <- no_removal
+  # don't highight strains
+  plots2 <- lapply(seq(1:nrow(pcs)), FUN = function(i) {
+    xpc <- as.character(pcs$first[i])
+    ypc <- as.character(pcs$second[i])
+    
+    ggplot() +
+      geom_point(data = nodiv, shape=21, alpha=0.8, size=2, aes(x=get(xpc),y=get(ypc)), fill = "grey70")+
+      theme_bw() +
+      theme(axis.title = element_text(size=11, color = "black"),
+            axis.text = element_text(size=10, color = "black"),
+            panel.grid = element_blank(),
+            legend.position = "none")+
+    labs(x = glue::glue("{xpc} ({round(tracy$VarExp[which(tracy$N == {xpc})]*100, digits = 2)}%)"),
+         y = glue::glue("{ypc} ({round(tracy$VarExp[which(tracy$N == {ypc})]*100, digits = 2)}%)"))
+  })
+  cowplot::plot_grid(plotlist = plots2)
+}
 ```
-
-
-```{r}
-no_removal <- data.table::fread(glue::glue("EIGESTRAT/{ld}/NO_REMOVAL/eigenstrat_no_removal.evac"), skip = 1) %>%
-  dplyr::rename(strain = V1) %>%
-  # dplyr::select(strain=V1, V2:V16) %>% 
-  dplyr::rename(PC1=V2, PC2=V3,PC3=V4, PC4=V5, PC5=V6, PC6 = V7) #%>%
-  # dplyr::left_join(., dplyr::select(WI, strain, geo), by='strain')
-
-```
-
-`r knitr::knit_child('pca_template_template2.Rmd')`
-
-<br>
-
-### With outlier removal
-
-**Variance Explained of PCs**
-
-```{r, fig.width = 8, fig.height = 6, echo = FALSE, message = FALSE, warning = FALSE}
-
-# how many PCs are significant?
-tracy <- data.table::fread(glue::glue("EIGESTRAT/{ld}/OUTLIER_REMOVAL/TracyWidom_statistics_outlier_removal.tsv")) %>%
-  dplyr::mutate(sum = sum(eigenvalue),
-                VarExp = eigenvalue/sum,
-                cumsum = cumsum(VarExp),
-                N = paste0("PC", N))
-
-# print(DT::datatable(tracy[1:10,]))
-tracy[1:10,]
-
-```
-
-```{r}
-no_removal <- data.table::fread(glue::glue("EIGESTRAT/{ld}/OUTLIER_REMOVAL/eigenstrat_outliers_removed.evac"), skip = 1) %>%
-  dplyr::rename(strain = V1) %>%
-  # dplyr::select(strain=V1, V2:V16) %>% 
-  dplyr::rename(PC1=V2, PC2=V3,PC3=V4, PC4=V5, PC5=V6, PC6 = V7) #%>%
-  # dplyr::left_join(., dplyr::select(WI, strain, geo), by='strain')
-
-```
-
-`r knitr::knit_child('pca_template_template2.Rmd')`

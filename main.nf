@@ -231,7 +231,9 @@ workflow {
         // run html report
         // not functional quite yet...
          run_eigenstrat_no_outlier_removal.out
-             .combine(run_eigenstrat_with_outlier_removal.out) | HTML_report_PCA
+             .join(run_eigenstrat_with_outlier_removal.out)
+             .combine(Channel.fromPath("${workflow.projectDir}/bin/pca_report.Rmd"))
+             .combine(Channel.fromPath("${workflow.projectDir}/bin/pca_template.Rmd"))| HTML_report_PCA
     }
     
 }
