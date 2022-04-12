@@ -212,6 +212,7 @@ process quick_tree {
 process plot_tree {
 
     label 'R'
+    memory { 24.GB + 10.GB * task.attempt }
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
 
@@ -269,7 +270,7 @@ process haplotype_sweep_plot {
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
 
-    memory { 10.GB + 10.GB * task.attempt }
+    memory { 20.GB + 20.GB * task.attempt }
     errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
 
     publishDir "${params.output}/haplotype", mode: 'copy'
@@ -382,7 +383,7 @@ process define_divergent_region {
         file("*")
 
     output:
-        tuple file("divergent_regions_strain.bed.gz"), file("divergent_regions_all.bed.gz"), file("divergent_regions.png")
+        tuple file("divergent_regions_strain.bed"), file("divergent_regions_all.bed"), file("divergent_regions.png")
 
     """
     cp ${workflow.projectDir}/bin/reoptimzied_divergent_region_characterization.Rmd reoptimzied_divergent_region_characterization.Rmd
