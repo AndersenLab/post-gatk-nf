@@ -1,0 +1,14 @@
+
+# Run an interactive BASH session on quest
+srun --account=b1042 \
+--partition=genomicsguestA \
+--time=03:00:00  \
+--mem=20G \
+--pty bash -l
+
+
+srun --account=b1042 \
+--partition=genomics \
+--time=03:00:00  \
+--mem=20G \
+--pty bash -l
