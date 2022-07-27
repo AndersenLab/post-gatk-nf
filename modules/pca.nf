@@ -106,7 +106,7 @@ process vcf_to_eigstrat_files {
 
   output:
     tuple val(test_ld), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
-    file ("markers.txt"), file ("sorted_samples.txt"), file ("PCA.vcf.gz"), file ("PCA.vcf.gz.tbi")
+    file ("markers.txt"), file ("sorted_samples.txt")
 
 
     """
@@ -116,7 +116,7 @@ process vcf_to_eigstrat_files {
 
     tabix -p vcf ce_norm.vcf.gz
 
-    plink --vcf ce_norm.vcf.gz --biallelic-only --set-missing-var-ids @:# --indep-pairwise 50 10 ${test_ld} --allow-extra-chr 
+    plink --vcf ce_norm.vcf.gz --snps-only --biallelic-only --set-missing-var-ids @:# --indep-pairwise 50 10 ${test_ld} --allow-extra-chr --make-bed
 
     plink --vcf ce_norm.vcf.gz --biallelic-only --set-missing-var-ids @:# --extract plink.prune.in --geno --recode12 --out eigenstrat_input --allow-extra-chr
 
@@ -126,17 +126,15 @@ process vcf_to_eigstrat_files {
     bcftools query -l ce_norm.vcf.gz |\\
     sort > sorted_samples.txt 
 
-    bcftools view -S sorted_samples.txt -R markers.txt ce_norm.vcf.gz -Oz -o PCA.vcf.gz
     
-    tabix -p vcf PCA.vcf.gz
 
-    bcftools view -S sorted_samples.txt -R markers.txt ce_norm.vcf.gz |\\
-    bcftools query -f '%CHROM\\t%CHROM:%POS\\t%cM\\t%POS\\t%REF\\t%ALT\\n' |\\
+    cat plink.bim |\\
     sed 's/^III/3/g' |\\
     sed 's/^II/2/g' |\\
     sed 's/^IV/4/g' |\\
     sed 's/^I/1/g' |\\
-    sed 's/^V/5/g' > eigenstrat_input.pedsnp      
+    sed 's/^V/5/g' |\\
+    cut -f-6 > eigenstrat_input.pedsnp      
 
     cut -f-6 -d' ' eigenstrat_input.ped |\\
     awk '{print 1, \$2, \$3, \$3, \$5, 1}'  > eigenstrat_input.pedind
@@ -161,7 +159,7 @@ process run_eigenstrat_no_outlier_removal {
 
   input:
     tuple val("ld"), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
-    file ("markers.txt"), file ("sorted_samples.txt"), file ("PCA.vcf.gz"), file ("PCA.vcf.gz.tbi"), file(eigenparameters)
+    file ("markers.txt"), file ("sorted_samples.txt"), file(eigenparameters)
 
   output:
     tuple val(ld), file("eigenstrat_no_removal.evac"), file("eigenstrat_no_removal.eval"), file("logfile_no_removal.txt"), \
@@ -197,7 +195,7 @@ process run_eigenstrat_with_outlier_removal {
 
   input:
     tuple val("ld"), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
-    file ("markers.txt"), file ("sorted_samples.txt"), file ("PCA.vcf.gz"), file ("PCA.vcf.gz.tbi"), file(eigenparameters)
+    file ("markers.txt"), file ("sorted_samples.txt"), file(eigenparameters)
 
   output:
     tuple val(ld), file("eigenstrat_outliers_removed.evac"), file("eigenstrat_outliers_removed.eval"), file("logfile_outlier.txt"), \
