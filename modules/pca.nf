@@ -158,11 +158,11 @@ process run_eigenstrat_no_outlier_removal {
   // conda '/projects/b1059/software/conda_envs/vcffixup'
 
   input:
-    tuple val("ld"), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
+    tuple val("test_ld"), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
     file ("markers.txt"), file ("sorted_samples.txt"), file(eigenparameters)
 
   output:
-    tuple val(ld), file("eigenstrat_no_removal.evac"), file("eigenstrat_no_removal.eval"), file("logfile_no_removal.txt"), \
+    tuple val(test_ld), file("eigenstrat_no_removal.evac"), file("eigenstrat_no_removal.eval"), file("logfile_no_removal.txt"), \
     file("eigenstrat_no_removal_relatedness"), file("eigenstrat_no_removal_relatedness.id"), file("TracyWidom_statistics_no_removal.tsv")
 
 
@@ -194,11 +194,11 @@ process run_eigenstrat_with_outlier_removal {
   publishDir "${params.output}/EIGESTRAT/LD_${test_ld}/OUTLIER_REMOVAL/", mode: 'copy'
 
   input:
-    tuple val("ld"), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
+    tuple val("test_ld"), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
     file ("markers.txt"), file ("sorted_samples.txt"), file(eigenparameters)
 
   output:
-    tuple val(ld), file("eigenstrat_outliers_removed.evac"), file("eigenstrat_outliers_removed.eval"), file("logfile_outlier.txt"), \
+    tuple val(test_ld), file("eigenstrat_outliers_removed.evac"), file("eigenstrat_outliers_removed.eval"), file("logfile_outlier.txt"), \
     file("eigenstrat_outliers_removed_relatedness"), file("eigenstrat_outliers_removed_relatedness.id"), file("TracyWidom_statistics_outlier_removal.tsv")
 
    
@@ -231,7 +231,7 @@ process HTML_report_PCA {
 
 
   input:
-  tuple val("ld"), file("eigenstrat_no_removal.evac"), file("eigenstrat_no_removal.eval"), file("logfile_no_removal.txt"), \
+  tuple val("test_ld"), file("eigenstrat_no_removal.evac"), file("eigenstrat_no_removal.eval"), file("logfile_no_removal.txt"), \
     file("eigenstrat_no_removal_relatedness"), file("eigenstrat_no_removal_relatedness.id"), file("TracyWidom_statistics_no_removal.tsv"), \
     file("eigenstrat_outliers_removed.evac"), file("eigenstrat_outliers_removed.eval"), file("logfile_outlier.txt"), \
     file("eigenstrat_outliers_removed_relatedness"), file("eigenstrat_outliers_removed_relatedness.id"), \
@@ -245,11 +245,11 @@ process HTML_report_PCA {
   """
   # prepare for report
   cat ${pca_report} | \\
-  sed "s+LD_VALUE+${ld}+" | \\
-  sed "s+EIGESTRAT/{ld}/NO_REMOVAL/++g" | \\
-  sed "s+EIGESTRAT/{ld}/OUTLIER_REMOVAL/++g" > pca_report_LD_${ld}.Rmd
+  sed "s+LD_VALUE+${test_ld}+" | \\
+  sed "s+EIGESTRAT/{test_ld}/NO_REMOVAL/++g" | \\
+  sed "s+EIGESTRAT/{test_ld}/OUTLIER_REMOVAL/++g" > pca_report_LD_${test_ld}.Rmd
 
-  Rscript -e "rmarkdown::render('pca_report_LD_${ld}.Rmd')"
+  Rscript -e "rmarkdown::render('pca_report_LD_${test_ld}.Rmd')"
   """
 
 
