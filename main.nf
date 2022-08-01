@@ -58,8 +58,8 @@ if(params.postgatk) {
 
 // check pca inputs
 if(params.pca && !params.postgatk) {
-    if(params.pops == null) error "Parameter --pops is required. Specify path to file"
-    if(params.anc == null) error "Parameter --anc is required. Specify ancestor strain"
+    // if(params.pops == null) error "Parameter --pops is required. Specify path to file"
+    // if(params.anc == null) error "Parameter --anc is required. Specify ancestor strain"
     if(params.eigen_ld == null) error "Parameter --eigen_ld is required. Specify LD value(s)"
     if(params.snv_vcf == null) error "Parameter --snv_vcf is required. Specify path to SNV-filtered VCF"
 }
@@ -207,19 +207,19 @@ workflow {
         }
 
         // extract ancestor
-        snv_vcf | extract_ancestor_bed
+        // snv_vcf | extract_ancestor_bed
 
         // annotate small vcf
-        snv_vcf 
-          .combine(extract_ancestor_bed.out)
-          .combine(pop_strains) | annotate_small_vcf 
+        // snv_vcf 
+         // .combine(extract_ancestor_bed.out)
+         // .combine(pop_strains) | annotate_small_vcf 
 
         ld_range = Channel.of("${params.eigen_ld}")
                       .splitCsv()
                       .flatMap { it }
 
         // make vcf for eigenstrat - use LD provided
-        annotate_small_vcf.out
+        snv_vcf
           .combine(ld_range) | vcf_to_eigstrat_files
 
         vcf_to_eigstrat_files.out
