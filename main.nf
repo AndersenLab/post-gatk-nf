@@ -20,7 +20,7 @@ if (params.debug) {
     params.bam_folder = "${workflow.projectDir}/test_data/bam"
     params.output = "popgen-${date}-debug"
     params.species = "c_elegans"
-    params.anc = "ECA718"
+    //params.anc = "ECA718"
     params.pops = "${workflow.projectDir}/input_files/WI_328_isotype.tsv"
     params.eigen_ld = "0.8,0.6"
 } else {
@@ -65,7 +65,7 @@ if(params.pca && !params.postgatk) {
 }
 
 if(params.pca && params.postgatk) {
-    if(params.anc == null) error "Parameter --anc is required. Specify ancestor strain"
+    //if(params.anc == null) error "Parameter --anc is required. Specify ancestor strain"
     if(params.eigen_ld == null) error "Parameter --eigen_ld is required. Specify LD value(s)"
 }
 
