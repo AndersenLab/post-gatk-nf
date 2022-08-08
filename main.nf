@@ -128,7 +128,7 @@ if (params.help) {
 }
 
 // import the pca module
-include {extract_ancestor_bed; annotate_small_vcf; vcf_to_eigstrat_files; run_eigenstrat_no_outlier_removal; run_eigenstrat_with_outlier_removal; HTML_report_PCA} from './modules/pca.nf'
+include {extract_ancestor_bed; annotate_small_vcf; vcf_to_eigstrat_files; run_eigenstrat_no_outlier_removal; run_eigenstrat_with_outlier_removal; HTML_report_PCA; get_singletons} from './modules/pca.nf'
 include {subset_iso_ref_strains; subset_iso_ref_soft; subset_snv; make_small_vcf; convert_tree; quick_tree; plot_tree; haplotype_sweep_IBD; haplotype_sweep_plot; 
     define_divergent_region; prep_variant_coverage; count_variant_coverage; get_species_sheet} from './modules/postgatk.nf'
 
@@ -219,21 +219,30 @@ workflow {
                       .flatMap { it }
 
         // make vcf for eigenstrat - use LD provided
+        snv_vcf | get_singletons
+        
+        
         snv_vcf
-          .combine(ld_range) | vcf_to_eigstrat_files
+          .combine(ld_range)
+          .combine(get_singletons.out) | vcf_to_eigstrat_files
 
         vcf_to_eigstrat_files.out
           .combine(Channel.fromPath(params.eigen_par_no_removal)) | run_eigenstrat_no_outlier_removal
-
+      
+        outlier_its = Channel.of("${params.outlier_iterations}")
+                        .splitCsv()
+                        .flatMap{ it }
+        
         vcf_to_eigstrat_files.out
-          .combine(Channel.fromPath(params.eigen_par_outlier_removal)) | run_eigenstrat_with_outlier_removal
+          .combine(Channel.fromPath(params.eigen_par_outlier_removal)) 
+          .combine(outlier_its) | run_eigenstrat_with_outlier_removal
 
         // run html report
         // not functional quite yet...
-         run_eigenstrat_no_outlier_removal.out
-             .join(run_eigenstrat_with_outlier_removal.out)
-             .combine(Channel.fromPath("${workflow.projectDir}/bin/pca_report.Rmd"))
-             .combine(Channel.fromPath("${workflow.projectDir}/bin/pca_template.Rmd"))| HTML_report_PCA
+        // run_eigenstrat_no_outlier_removal.out
+          //   .join(run_eigenstrat_with_outlier_removal.out)
+          //   .combine(Channel.fromPath("${workflow.projectDir}/bin/pca_report.Rmd"))
+          //   .combine(Channel.fromPath("${workflow.projectDir}/bin/pca_template.Rmd"))| HTML_report_PCA
     }
     
 }
