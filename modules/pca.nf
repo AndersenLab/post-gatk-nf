@@ -91,6 +91,24 @@ process annotate_small_vcf {
 ------------ Prepare files for EIGENSTRAT
 */
 
+process get_singletons {
+  tag {"PREPARE EIGENSTRAT FILES"}
+
+  
+  
+  conda '/home/rjm6024/.conda/envs/singleton_filerting'
+  
+  input:
+      tuple file(vcf), file(vcfindex)
+  output: 
+      file("singleton_ids.txt")
+      
+  """
+  vcftools --gzvcf ${vcf} --singletons
+  cat out.singletons | awk 'BEGIN{OFS=":"} {if (NR!=1) print \$1,\$2}' > singleton_ids.txt
+  """
+}
+
 process vcf_to_eigstrat_files {
 
   tag {"PREPARE EIGENSTRAT FILES"}
@@ -102,7 +120,7 @@ process vcf_to_eigstrat_files {
   publishDir "${params.output}/EIGESTRAT/LD_${test_ld}/INPUTFILES", mode: 'copy'
 
   input:
-    tuple file(vcf), file(vcfindex), val("test_ld")
+    tuple file(vcf), file(vcfindex), val("test_ld"), file(singleton_ids)
 
   output:
     tuple val(test_ld), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
@@ -118,7 +136,9 @@ process vcf_to_eigstrat_files {
 
     plink --vcf ce_norm.vcf.gz --snps-only --biallelic-only --set-missing-var-ids @:# --indep-pairwise 50 10 ${test_ld} --allow-extra-chr --make-bed
 
-    plink --vcf ce_norm.vcf.gz --biallelic-only --set-missing-var-ids @:# --extract plink.prune.in --geno 0 --recode12 --out eigenstrat_input --allow-extra-chr
+
+    plink --vcf ce_norm.vcf.gz --biallelic-only --set-missing-var-ids @:# --extract plink.prune.in --exclude singleton_ids.txt --geno 0 --recode12 --out eigenstrat_input --allow-extra-chr
+
 
     awk -F":" '\$1=\$1' OFS="\\t" plink.prune.in | \\
     sort -k1,1d -k2,2n > markers.txt
