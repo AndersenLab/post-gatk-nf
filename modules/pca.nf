@@ -203,7 +203,7 @@ process run_eigenstrat_with_outlier_removal {
 
    
     """
-    bash "${workflow.projectDir}/bin/edit_outlier_param.sh -f ${eigenparameters} -n ${num_outliers}
+    bash ${workflow.projectDir}/bin/edit_outlier_param.sh -f ${eigenparameters} -n ${num_outliers}
 
     smartpca -p outlier_eigpar > logfile_outlier.txt
 

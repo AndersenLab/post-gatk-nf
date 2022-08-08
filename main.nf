@@ -225,15 +225,20 @@ workflow {
         vcf_to_eigstrat_files.out
           .combine(Channel.fromPath(params.eigen_par_no_removal)) | run_eigenstrat_no_outlier_removal
 
+        outlier_its = Channel.of("${params.outlier_iterations}")
+                        .splitCsv()
+                        .flatMap{ it }
+        
         vcf_to_eigstrat_files.out
-          .combine(Channel.fromPath(params.eigen_par_outlier_removal)) | run_eigenstrat_with_outlier_removal
+          .combine(Channel.fromPath(params.eigen_par_outlier_removal)) 
+          .combine(outlier_its) | run_eigenstrat_with_outlier_removal
 
         // run html report
         // not functional quite yet...
-         run_eigenstrat_no_outlier_removal.out
-             .join(run_eigenstrat_with_outlier_removal.out)
-             .combine(Channel.fromPath("${workflow.projectDir}/bin/pca_report.Rmd"))
-             .combine(Channel.fromPath("${workflow.projectDir}/bin/pca_template.Rmd"))| HTML_report_PCA
+         // run_eigenstrat_no_outlier_removal.out
+             // .join(run_eigenstrat_with_outlier_removal.out)
+             // .combine(Channel.fromPath("${workflow.projectDir}/bin/pca_report.Rmd"))
+             // .combine(Channel.fromPath("${workflow.projectDir}/bin/pca_template.Rmd"))| HTML_report_PCA
     }
     
 }

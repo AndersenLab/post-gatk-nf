@@ -7,7 +7,5 @@ do
     esac
 done
 
-@num_out=20
-
 #Must keep double quotes so that shell will expand the variable
-cat ${file} | sed -e "s/numoutlieriter:  ../numoutlieriter:  ${num_out}/g" > outlier_eigpar 
+cat ${file} | sed -e "s/numoutlieriter:  ../numoutlieriter:  ${num_out}/g" > outlier_eigpar
