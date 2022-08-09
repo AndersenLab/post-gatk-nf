@@ -5,7 +5,7 @@
     - Katie Evans <katiesevans9@gmail.com>
 */
 
-nextflow.preview.dsl=2
+nextflow.enable.dsl=2
 // NXF_VER=20.01.0" Require later version of nextflow
 //assert System.getenv("NXF_VER") == "20.01.0"
 
