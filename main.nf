@@ -37,7 +37,8 @@ if (params.debug) {
     params.anc = null
     params.pops = null
     params.eigen_ld = null
-    params.snv_vcf = null
+    params.pca_vcf = null
+    params.outlier_iterations = "5"
 }
 
 // more params
@@ -61,7 +62,7 @@ if(params.pca && !params.postgatk) {
     // if(params.pops == null) error "Parameter --pops is required. Specify path to file"
     // if(params.anc == null) error "Parameter --anc is required. Specify ancestor strain"
     if(params.eigen_ld == null) error "Parameter --eigen_ld is required. Specify LD value(s)"
-    if(params.snv_vcf == null) error "Parameter --snv_vcf is required. Specify path to SNV-filtered VCF"
+    if(params.pca_vcf == null) error "Parameter --pca_vcf is required. Specify path to SNV-filtered VCF"
 }
 
 if(params.pca && params.postgatk) {
@@ -187,7 +188,7 @@ workflow {
         }
 
         // collect snv vcf for pca
-        snv_vcf = subset_snv.out
+        pca_vcf = subset_snv.out
 
         // generate pops file for pca
         pop_strains = subset_iso_ref_strains.out.pop_strains
@@ -202,15 +203,15 @@ workflow {
 
         // check if pca only or also postgatk
         if(!params.postgatk) {
-            snv_vcf = Channel.fromPath("${params.snv_vcf}").combine(Channel.fromPath("${params.snv_vcf}.tbi"))
+            pca_vcf = Channel.fromPath("${params.pca_vcf}").combine(Channel.fromPath("${params.pca_vcf}.tbi"))
             pop_strains = Channel.fromPath("${params.pops}")
         }
 
         // extract ancestor
-        // snv_vcf | extract_ancestor_bed
+        // pca_vcf | extract_ancestor_bed
 
         // annotate small vcf
-        // snv_vcf 
+        // pca_vcf 
          // .combine(extract_ancestor_bed.out)
          // .combine(pop_strains) | annotate_small_vcf 
 
@@ -219,13 +220,23 @@ workflow {
                       .flatMap { it }
 
         // make vcf for eigenstrat - use LD provided
-        snv_vcf | get_singletons
-        
-        
-        snv_vcf
-          .combine(ld_range)
-          .combine(get_singletons.out) | vcf_to_eigstrat_files
+        if(params.singletons){
+            pca_vcf | get_singletons
 
+            pca_vcf
+            .combine(ld_range)
+            .combine(get_singletons.out)| vcf_to_eigstrat_files
+
+        }
+        else{
+            singleton_ids = Channel.fromPath("bin/blank_snps.txt")
+        
+            pca_vcf
+                .combine(ld_range)
+                .combine(singleton_ids) | vcf_to_eigstrat_files
+        }
+        
+        //just a path to a blank file so we don't filter anything
         vcf_to_eigstrat_files.out
           .combine(Channel.fromPath(params.eigen_par_no_removal)) | run_eigenstrat_no_outlier_removal
       

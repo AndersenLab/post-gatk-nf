@@ -105,6 +105,8 @@ You can debug the PCA pipeline with the following data/command:
 
 ```
 nextflow run main.nf --vcf ./test_data/WI.20220404.hard-filter.vcf.gz --species c_elegans --sample_sheet ./test_data/sample_sheet_2.tsv --eigen_ld 0.8,0.6 --anc XZ2019 --pca -resume
+
+
 ```
 
 ## --sample_sheet
@@ -136,9 +138,16 @@ __default__ = c_elegans
 
 Options: c_elegans, c_briggsae, or c_tropicalis
 
-### --snv_vcf (pca profile)
+## PCA 
+The PCA profile can be run either with the full pipeline of independently. To run only PCA use `-profile pca` 
 
-File path to SNV-filtered VCF
+The input VCF is filtered to bi-alleleic snps with no missing genotypes. A LD filtering threshold is required and LD filtering is performed using plink. You can also filter for singletons by specifying the `--singletons` 
+
+PCA is performed using smartPCA. Parameters to control outlier threshold or removal iterations are desribed below.
+
+### --pca_vcf (pca profile)
+
+File path to VCF
 
 ### --pops (pca profile)
 
@@ -155,11 +164,13 @@ Strain list to filter VCF for PCA analysis. No header:
 
 LD thresholds to test for PCA. Can provide multiple with `--eigen_ld 0.8,0.6,0.4`
 
-### --anc (pca)
+### --outlier_iterations (pca) (optinal)
 
-Ancestor strain to use for PCA. 
+Number of smartPCA outlier removal iterations `--outlier_iterations 5,10,15,20` Default is 5
 
- *Note: Make sure this strain is in your VCF*
+### --singletons (pca) (optional)
+
+Wether or not to filter for singletons in PCA `--singletons 
 
 ### --output (optional)
 

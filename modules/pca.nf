@@ -134,9 +134,9 @@ process vcf_to_eigstrat_files {
 
     tabix -p vcf ce_norm.vcf.gz
 
-    plink --vcf ce_norm.vcf.gz --snps-only --biallelic-only --set-missing-var-ids @:# --indep-pairwise 50 10 ${test_ld} --allow-extra-chr --make-bed
+    plink --vcf ce_norm.vcf.gz --snps-only --biallelic-only --set-missing-var-ids @:# --indep-pairwise 50 10 ${test_ld} --allow-extra-chr 
 
-    plink --vcf ce_norm.vcf.gz --biallelic-only --set-missing-var-ids @:# --extract plink.prune.in --exclude singleton_ids.txt --geno 0 --recode12 --out eigenstrat_input --allow-extra-chr
+    plink --vcf ce_norm.vcf.gz --biallelic-only --set-missing-var-ids @:# --extract plink.prune.in --exclude ${singleton_ids} --geno 0 --recode12 --out eigenstrat_input --allow-extra-chr --make-bed
 
     awk -F":" '\$1=\$1' OFS="\\t" plink.prune.in | \\
     sort -k1,1d -k2,2n > markers.txt
@@ -146,7 +146,7 @@ process vcf_to_eigstrat_files {
 
     
 
-    cat plink.bim |\\
+    cat eigenstrat_input.bim |\\
     sed 's/^III/3/g' |\\
     sed 's/^II/2/g' |\\
     sed 's/^IV/4/g' |\\
