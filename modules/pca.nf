@@ -138,6 +138,7 @@ process vcf_to_eigstrat_files {
 
     plink --vcf ce_norm.vcf.gz --biallelic-only --set-missing-var-ids @:# --extract plink.prune.in --exclude ${singleton_ids} --geno 0 --recode12 --out eigenstrat_input --allow-extra-chr --make-bed
 
+
     awk -F":" '\$1=\$1' OFS="\\t" plink.prune.in | \\
     sort -k1,1d -k2,2n > markers.txt
 
