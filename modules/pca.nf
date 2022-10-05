@@ -124,7 +124,7 @@ process vcf_to_eigstrat_files {
 
   output:
     tuple val(test_ld), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
-    file ("markers.txt"), file ("sorted_samples.txt")
+    file ("markers.txt"),  file ("sorted_samples.txt"), file("eigenstrat_input.vcf")
 
 
     """
@@ -136,8 +136,9 @@ process vcf_to_eigstrat_files {
 
     plink --vcf ce_norm.vcf.gz --snps-only --biallelic-only --set-missing-var-ids @:# --indep-pairwise 50 10 ${test_ld} --allow-extra-chr 
 
-    plink --vcf ce_norm.vcf.gz --biallelic-only --set-missing-var-ids @:# --extract plink.prune.in --exclude ${singleton_ids} --geno 0 --recode12 --out eigenstrat_input --allow-extra-chr --make-bed
-
+    plink --vcf ce_norm.vcf.gz --biallelic-only --set-missing-var-ids @:# --extract plink.prune.in --exclude ${singleton_ids} --geno 0 --recode12 --out eigenstrat_input --allow-extra-chr --make-bed   
+   
+    plink --vcf ce_norm.vcf.gz --biallelic-only --set-missing-var-ids @:# --extract plink.prune.in --exclude blank_snps.txt --geno 0 --out eigenstrat_input --allow-extra-chr --export vcf bgz  
 
     awk -F":" '\$1=\$1' OFS="\\t" plink.prune.in | \\
     sort -k1,1d -k2,2n > markers.txt
@@ -162,6 +163,44 @@ process vcf_to_eigstrat_files {
     """
 
 }
+
+
+/*
+------------ input eigan data to tree (normal tree has different filtering steps)
+*/
+
+process pca_tree {
+
+  publishDir "${params.output}/EIGESTRAT/LD_${test_ld}/Tree/", mode: 'copy'
+
+  label 'post'
+
+  // conda '/projects/b1059/software/conda_envs/vcffixup'
+
+  input:
+    tuple val("test_ld"), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
+    file ("markers.txt"), file ("sorted_samples.txt"), file(eigenparameters)
+
+  output:
+    tuple val(test_ld), file("eigenstrat_no_removal.evac"), file("eigenstrat_no_removal.eval"), file("logfile_no_removal.txt"), \
+    file("eigenstrat_no_removal_relatedness"), file("eigenstrat_no_removal_relatedness.id"), file("TracyWidom_statistics_no_removal.tsv")
+
+
+    """
+
+    smartpca -p ${eigenparameters} > logfile_no_removal.txt
+
+    sed -n -e '/Tracy/,\$p' logfile_no_removal.txt |\
+    sed -e '/kurt/,\$d' |\
+    awk '\$0 !~ "##" && \$0 !~ "#" {print}' |\
+    sed -e "s/[[:space:]]\\+/ /g" |\
+    sed 's/^ //g' |\
+    awk 'BEGIN{print "N", "eigenvalue", "difference", "twstat", "p-value", "effect.n"}; {print}' OFS="\\t" |\
+    awk -F" " '\$1=\$1' OFS="\\t" > TracyWidom_statistics_no_removal.tsv
+    """
+
+}
+
 
 
 /*
