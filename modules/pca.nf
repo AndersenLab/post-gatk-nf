@@ -124,7 +124,7 @@ process vcf_to_eigstrat_files {
 
   output:
     tuple val(test_ld), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
-    file ("markers.txt"),  file ("sorted_samples.txt"), file("eigenstrat_input.vcf")
+    file ("eiganstrat_markers.txt"),  file ("sorted_samples.txt")
 
 
     """
@@ -138,10 +138,8 @@ process vcf_to_eigstrat_files {
 
     plink --vcf ce_norm.vcf.gz --biallelic-only --set-missing-var-ids @:# --extract plink.prune.in --exclude ${singleton_ids} --geno 0 --recode12 --out eigenstrat_input --allow-extra-chr --make-bed   
    
-    plink --vcf ce_norm.vcf.gz --biallelic-only --set-missing-var-ids @:# --extract plink.prune.in --exclude blank_snps.txt --geno 0 --out eigenstrat_input --allow-extra-chr --export vcf bgz  
-
-    awk -F":" '\$1=\$1' OFS="\\t" plink.prune.in | \\
-    sort -k1,1d -k2,2n > markers.txt
+    awk '{print \$2}' OFS="\t" eigenstrat_input.bim | 
+    awk -F":" '\$1=\$1' OFS="\t"| sort -k1,1d -k2,2n > eiganstrat_markers.txt
 
     bcftools query -l ce_norm.vcf.gz |\\
     sort > sorted_samples.txt 
@@ -179,7 +177,7 @@ process pca_tree {
 
   input:
     tuple val("test_ld"), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
-    file ("markers.txt"), file ("sorted_samples.txt"), file(eigenparameters)
+    file (".txt"), file ("sorted_samples.txt"), file(eigenparameters)
 
   output:
     tuple val(test_ld), file("eigenstrat_no_removal.evac"), file("eigenstrat_no_removal.eval"), file("logfile_no_removal.txt"), \
@@ -217,7 +215,7 @@ process run_eigenstrat_no_outlier_removal {
 
   input:
     tuple val("test_ld"), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
-    file ("markers.txt"), file ("sorted_samples.txt"), file(eigenparameters)
+    file ("eiganstrat_markers.txt"), file ("sorted_samples.txt"), file(eigenparameters)
 
   output:
     tuple val(test_ld), file("eigenstrat_no_removal.evac"), file("eigenstrat_no_removal.eval"), file("logfile_no_removal.txt"), \
@@ -253,7 +251,7 @@ process run_eigenstrat_with_outlier_removal {
 
   input:
     tuple val("test_ld"), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
-    file ("markers.txt"), file ("sorted_samples.txt"), file(eigenparameters), val("num_outliers")
+    file ("eiganstrat_markers.txt"), file ("sorted_samples.txt"), file(eigenparameters), val("num_outliers")
 
   output:
     tuple val(test_ld), file("eigenstrat_outliers_removed.evac"), file("eigenstrat_outliers_removed.eval"), file("logfile_outlier.txt"), \
