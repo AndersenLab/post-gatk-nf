@@ -3,7 +3,6 @@
     Subset isotype reference strains
     ==================
 */
-
 process subset_iso_ref_strains {
 
     label 'postgatk'

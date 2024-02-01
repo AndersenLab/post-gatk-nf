@@ -339,6 +339,8 @@ ggplot(plot_df,
 
 ggsave(paste("sweep.pdf"),
        height = 70, width = 35, limitsize = FALSE)
+ggsave(paste("sweep.png"),
+       height = 70, width = 35, limitsize = FALSE)
 
 #===============#
 # Sweep summary #
