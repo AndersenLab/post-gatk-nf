@@ -229,7 +229,7 @@ workflow {
 
         }
         else{
-            singleton_ids = Channel.fromPath("bin/blank_snps.txt")
+            singleton_ids = Channel.fromPath("${workflow.projectDir}/bin/blank_snps.txt")
         
             pca_vcf
                 .combine(ld_range)
