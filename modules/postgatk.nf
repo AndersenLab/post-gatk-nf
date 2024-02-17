@@ -157,9 +157,9 @@ process make_small_vcf {
 process convert_tree {
 
     // label 'tree'
-    container 'shub://bioconvert/bioconvert:latest'
+    // container 'shub://bioconvert/bioconvert:latest'
 
-    // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+     conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
     memory { 24.GB + 10.GB * task.attempt }
     errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
@@ -178,7 +178,7 @@ process convert_tree {
 
     python ${workflow.projectDir}/bin/vcf2phylip.py -i ${vcf}
 
-    bioconvert phylip2stockholm \${output_phylip}
+    bioconvert phylip2stockholm \${output_phylip} \${output_stockholm}
 
 """
 
@@ -188,8 +188,8 @@ process quick_tree {
 
     label 'tree'
 
-    memory { 24.GB + 10.GB * task.attempt }
-    errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
+    memory { 44.GB + 10.GB * task.attempt }
+    errorStrategy { task.attempt < 5 ? 'retry' : 'ignore' }
     publishDir "${params.output}/tree", mode: 'copy'
 
     input:
