@@ -124,8 +124,8 @@ process vcf_to_eigstrat_files {
 
   output:
     tuple val(test_ld), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
-    file ("eiganstrat_markers.txt"),  file ("sorted_samples.txt")
-
+    file ("eiganstrat_markers.txt"),  file ("sorted_samples.txt"), emit : eig_strat_inputs
+    tuple file("ce_norm.vcf.gz"), file ("eiganstrat_input.vcf.gz"), emit: vcf_file
 
     """
 
@@ -140,6 +140,8 @@ process vcf_to_eigstrat_files {
    
     awk '{print \$2}' OFS="\t" eigenstrat_input.bim | 
     awk -F":" '\$1=\$1' OFS="\t"| sort -k1,1d -k2,2n > eiganstrat_markers.txt
+
+    bcftools view -T eiganstrat_markers.txt -Oz -o eiganstrat_input.vcf.gz ce_norm.vcf.gz
 
     bcftools query -l ce_norm.vcf.gz |\\
     sort > sorted_samples.txt 

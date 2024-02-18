@@ -237,14 +237,14 @@ workflow {
         }
         
         //just a path to a blank file so we don't filter anything
-        vcf_to_eigstrat_files.out
+        vcf_to_eigstrat_files.out.eig_strat_inputs
           .combine(Channel.fromPath(params.eigen_par_no_removal)) | run_eigenstrat_no_outlier_removal
 
         outlier_its = Channel.of("${params.outlier_iterations}")
                         .splitCsv()
                         .flatMap{ it }
         
-        vcf_to_eigstrat_files.out
+        vcf_to_eigstrat_files.out.eig_strat_inputs
           .combine(Channel.fromPath(params.eigen_par_outlier_removal)) 
           .combine(outlier_its) | run_eigenstrat_with_outlier_removal
 
