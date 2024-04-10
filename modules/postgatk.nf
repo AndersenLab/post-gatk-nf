@@ -7,7 +7,7 @@ process subset_iso_ref_strains {
 
     label 'postgatk'
 
-    // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+    // conda "/data/eande106/software/conda_envs/popgen-nf_env"
 
     memory 20.GB
     cpus 4
@@ -57,7 +57,7 @@ process subset_iso_ref_soft {
 
     label 'postgatk'
 
-    // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+    // conda "/data/eande106/software/conda_envs/popgen-nf_env"
 
     memory 20.GB
     cpus 4
@@ -129,7 +129,7 @@ process make_small_vcf {
 
     label 'postgatk'
 
-    // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+    // conda "/data/eande106/software/conda_envs/popgen-nf_env"
     publishDir "${params.output}/variation", mode: 'copy'
 
     input:
@@ -159,7 +159,7 @@ process convert_tree {
     // label 'tree'
     // container 'shub://bioconvert/bioconvert:latest'
 
-     conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+     conda "/data/eande106/software/conda_envs/popgen-nf_env"
 
     memory { 24.GB + 10.GB * task.attempt }
     errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
@@ -213,7 +213,7 @@ process plot_tree {
     label 'R'
     memory { 24.GB + 10.GB * task.attempt }
 
-    // conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
+    // conda "/data/eande106/software/conda_envs/popgen-nf-r_env"
 
     publishDir "${params.output}/tree", mode: 'copy'
 
@@ -241,7 +241,7 @@ process haplotype_sweep_IBD {
 
     label 'postgatk'
 
-    // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+    // conda "/data/eande106/software/conda_envs/popgen-nf_env"
 
     publishDir "${params.output}/haplotype", mode: 'copy'
 
@@ -267,7 +267,7 @@ process haplotype_sweep_plot {
 
     label 'R'
 
-    // conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
+    // conda "/data/eande106/software/conda_envs/popgen-nf-r_env"
 
     memory { 20.GB + 20.GB * task.attempt }
     errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
@@ -302,7 +302,7 @@ process prep_variant_coverage {
 
     label 'postgatk'
 
-    // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+    // conda "/data/eande106/software/conda_envs/popgen-nf_env"
 
     // publishDir "${params.output}/divergent_regions/Mask_DF", mode: 'copy'
 
@@ -336,7 +336,7 @@ process count_variant_coverage {
 
     label 'postgatk'
 
-    // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
+    // conda "/data/eande106/software/conda_envs/popgen-nf_env"
 
     publishDir "${params.output}/divergent_regions/Mask_DF", mode: 'copy'
 
@@ -368,7 +368,7 @@ process define_divergent_region {
 
     label 'R'
 
-    // conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
+    // conda "/data/eande106/software/conda_envs/popgen-nf-r_env"
 
     publishDir "${params.output}/divergent_regions", mode: 'copy'
     publishDir "${params.output}/NemaScan", pattern: 'divergent_bins.bed', mode: 'copy'
@@ -407,7 +407,7 @@ process get_species_sheet {
     
     publishDir "${params.output}/NemaScan/", mode: 'copy'
 
-    // conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
+    // conda "/data/eande106/software/conda_envs/popgen-nf-r_env"
 
     output:
         file("strain_isotype_lookup.tsv")

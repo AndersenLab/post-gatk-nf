@@ -48,7 +48,7 @@ process annotate_small_vcf {
 
     label 'postgatk'
 
-    // conda '/projects/b1059/software/conda_envs/vcffixup'
+    // conda 'data/eande106/software/conda_envs/vcffixup'
 
     cpus 1
 
@@ -115,7 +115,7 @@ process vcf_to_eigstrat_files {
 
   label 'postgatk'
 
-  // conda '/projects/b1059/software/conda_envs/vcffixup'
+  // conda '/data/eande106/software/conda_envs/vcffixup'
 
   publishDir "${params.output}/EIGESTRAT/LD_${test_ld}/INPUTFILES", mode: 'copy'
 
@@ -175,7 +175,7 @@ process pca_tree {
 
   label 'post'
 
-  // conda '/projects/b1059/software/conda_envs/vcffixup'
+  // conda '/data/eande106/software/conda_envs/vcffixup'
 
   input:
     tuple val("test_ld"), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
@@ -213,7 +213,7 @@ process run_eigenstrat_no_outlier_removal {
 
   label 'pca'
 
-  // conda '/projects/b1059/software/conda_envs/vcffixup'
+  // conda '/data/eande106/software/conda_envs/vcffixup'
 
   input:
     tuple val("test_ld"), file("eigenstrat_input.ped"), file("eigenstrat_input.pedsnp"), file("eigenstrat_input.pedind"), file("plink.prune.in"), \
@@ -245,7 +245,7 @@ process run_eigenstrat_no_outlier_removal {
 
 process run_eigenstrat_with_outlier_removal {
 
-  // conda '/projects/b1059/software/conda_envs/vcffixup'
+  // conda '/data/eande106/software/conda_envs/vcffixup'
 
   label 'pca'
 
@@ -285,7 +285,7 @@ process HTML_report_PCA {
 
   label 'R'
 
-  // conda '/projects/b1059/software/conda_envs/cegwas2-nf_env'
+  // conda '/data/eande106/software/conda_envs/cegwas2-nf_env'
 
   publishDir "${params.output}/", mode: 'copy'
 
