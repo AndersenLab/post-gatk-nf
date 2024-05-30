@@ -159,7 +159,7 @@ process convert_tree {
 
     conda "${params.softwareDir}/software/conda_envs/popgen-nf_env"
     
-    label 'lg'
+    label 'md'
 
     input:
         tuple file(vcf), file(vcf_index)

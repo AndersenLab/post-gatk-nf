@@ -166,8 +166,8 @@ workflow {
         // subset SNV vcf for imputation
         subset_iso_ref_strains.out.vcf | subset_snv
 
-        // // build tree
-        // input_vcf.combine(input_vcf_index).concat(subset_iso_ref_strains.out.vcf) | convert_tree | quick_tree | plot_tree
+        // build tree
+        input_vcf.combine(input_vcf_index).concat(subset_iso_ref_strains.out.vcf) | convert_tree | quick_tree | plot_tree
 
         // haplotype
         subset_iso_ref_strains.out.vcf.combine(contigs) | haplotype_sweep_IBD
