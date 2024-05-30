@@ -154,7 +154,7 @@ process make_small_vcf {
 
 process convert_tree {
 
-    label 'tree'
+    label 'bioconvert'
     label 'md'
 
     // conda "${params.softwareDir}/software/conda_envs/popgen-nf_env"
