@@ -236,7 +236,7 @@ process plot_tree {
 process haplotype_sweep_IBD {
 
     label 'postgatk'
-    label 'ml'
+    label 'md'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
@@ -248,7 +248,7 @@ process haplotype_sweep_IBD {
     output: file("*.ibd")
 
     """
-    java -Xmx16G -jar ${workflow.projectDir}/bin/ibdseq.r1206.jar gt=${vcf} minalleles=4 r2max=0.3 ibdlod=3 r2window=1500 nthreads=4 chrom=${contig} out=${contig}
+    java -Xmx${task.mem} -jar ${workflow.projectDir}/bin/ibdseq.r1206.jar gt=${vcf} minalleles=4 r2max=0.3 ibdlod=3 r2window=1500 nthreads=${task.cpus} chrom=${contig} out=${contig}
 
 
     """
