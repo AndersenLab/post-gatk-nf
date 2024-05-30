@@ -5,9 +5,9 @@
     - Katie Evans <katiesevans9@gmail.com>
 */
 
-nextflow.preview.dsl=2
-// NXF_VER=20.01.0" Require later version of nextflow
-//assert System.getenv("NXF_VER") == "20.01.0"
+nextflow.enable.dsl=2
+// NXF_VER=23.0" Require later version of nextflow
+//assert System.getenv("NXF_VER") >= "23.0"
 
 date = new Date().format( 'yyyyMMdd' )
 contigs = Channel.from("I","II","III","IV","V","X")
@@ -31,7 +31,7 @@ if (params.debug) {
     params.soft_vcf = "${params.vcf_folder}/*.soft-filter.vcf.gz"
 
     // folder for the bam files. currently need to put all bam in the same folder
-    params.bam_folder = "/projects/b1059/data/${params.species}/WI/alignments/"
+    params.bam_folder = "${dataDir}/${params.species}/WI/alignments/"
     params.output = "popgen-${date}"
     // PCA params
     params.anc = null
@@ -45,7 +45,7 @@ if (params.debug) {
 params.vcfanno_config = "${workflow.projectDir}/input_files/ANNOTATION_conf.toml"
 params.eigen_par_outlier_removal = "${workflow.projectDir}/bin/eigpar"
 params.eigen_par_no_removal = "${workflow.projectDir}/bin/eigpar_no_removal"
-params.R_libpath = "/projects/b1059/software/R_lib_3.6.0"
+params.R_libpath = "${params.softwareDir}/R_lib_3.6.0"
 params.snps = '--snps-only'
 
 
