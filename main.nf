@@ -166,32 +166,32 @@ workflow {
         // subset SNV vcf for imputation
         subset_iso_ref_strains.out.vcf | subset_snv
 
-        // build tree
-        input_vcf.combine(input_vcf_index).concat(subset_iso_ref_strains.out.vcf) | convert_tree | quick_tree | plot_tree
+        // // build tree
+        // input_vcf.combine(input_vcf_index).concat(subset_iso_ref_strains.out.vcf) | convert_tree | quick_tree | plot_tree
 
-        // haplotype
-        subset_iso_ref_strains.out.vcf.combine(contigs) | haplotype_sweep_IBD
-        subset_iso_ref_strains.out.vcf.combine(sample_sheet).combine(isotype_convert_table)  | prep_variant_coverage 
-        // subset_iso_ref_strains.out.vcf.combine(sample_sheet).combine(isotype_convert_table) | prep_variant_coverage 
+        // // haplotype
+        // subset_iso_ref_strains.out.vcf.combine(contigs) | haplotype_sweep_IBD
+        // subset_iso_ref_strains.out.vcf.combine(sample_sheet).combine(isotype_convert_table)  | prep_variant_coverage 
+        // // subset_iso_ref_strains.out.vcf.combine(sample_sheet).combine(isotype_convert_table) | prep_variant_coverage 
 
-        prep_variant_coverage.out
-            .collectFile(name: "test.tsv", keepHeader: true)
-            .splitCsv(header:true)
-            .map { row -> [ row.strain, file(row.bam), file(row.bai) ] }
-            .combine(subset_iso_ref_strains.out.vcf) | count_variant_coverage
+        // prep_variant_coverage.out
+        //     .collectFile(name: "test.tsv", keepHeader: true)
+        //     .splitCsv(header:true)
+        //     .map { row -> [ row.strain, file(row.bam), file(row.bai) ] }
+        //     .combine(subset_iso_ref_strains.out.vcf) | count_variant_coverage
 
 
-        // haplotype_sweep_plot and define_divergent_region always give error during debugging run prob b/c the debug dataset is too small. so turn it off when debugging
-        if (!params.debug) {
-          haplotype_sweep_IBD.out.collect() | haplotype_sweep_plot
-          count_variant_coverage.out.collect() | define_divergent_region
-        }
+        // // haplotype_sweep_plot and define_divergent_region always give error during debugging run prob b/c the debug dataset is too small. so turn it off when debugging
+        // if (!params.debug) {
+        //   haplotype_sweep_IBD.out.collect() | haplotype_sweep_plot
+        //   count_variant_coverage.out.collect() | define_divergent_region
+        // }
 
-        // collect snv vcf for pca
-        pca_vcf = subset_snv.out
+        // // collect snv vcf for pca
+        // pca_vcf = subset_snv.out
 
-        // generate pops file for pca
-        pop_strains = subset_iso_ref_strains.out.pop_strains
+        // // generate pops file for pca
+        // pop_strains = subset_iso_ref_strains.out.pop_strains
     }
 
     // PCA analysis
