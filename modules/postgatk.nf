@@ -248,7 +248,10 @@ process haplotype_sweep_IBD {
     output: file("*.ibd")
 
     """
-    java -Xmx${task.memory} -jar ${workflow.projectDir}/bin/ibdseq.r1206.jar gt=${vcf} minalleles=4 r2max=0.3 ibdlod=3 r2window=1500 nthreads=${task.cpus} chrom=${contig} out=${contig}
+    MEM="${task.memory}"
+    MEM=\${MEM/ /}
+    MEM=\${MEM/GB/G}
+    java -Xmx\${MEM} -jar ${workflow.projectDir}/bin/ibdseq.r1206.jar gt=${vcf} minalleles=4 r2max=0.3 ibdlod=3 r2window=1500 nthreads=${task.cpus} chrom=${contig} out=${contig}
 
 
     """
