@@ -154,12 +154,11 @@ process make_small_vcf {
 
 process convert_tree {
 
-    // label 'tree'
-    container 'shub://bioconvert/bioconvert:0.6.1'
+    label 'tree'
+    label 'md'
 
     // conda "${params.softwareDir}/software/conda_envs/popgen-nf_env"
     
-    label 'md'
 
     input:
         tuple file(vcf), file(vcf_index)
