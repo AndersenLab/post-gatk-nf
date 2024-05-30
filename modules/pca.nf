@@ -16,10 +16,9 @@
 process extract_ancestor_bed {
 
     label 'postgatk'
+    label 'xs'
 
     publishDir "${params.output}/ANNOTATE_VCF", mode: 'copy'
-
-    cpus 1
 
     input:
       tuple file(vcf), file(vcfindex)
@@ -47,10 +46,9 @@ process annotate_small_vcf {
     publishDir "${params.output}/ANNOTATE_VCF", mode: 'copy'
 
     label 'postgatk'
+    label 'xs'
 
     // conda '/projects/b1059/software/conda_envs/vcffixup'
-
-    cpus 1
 
     input:
       tuple file(vcf), file(vcfindex), file("ANC.bed.gz"), file("ANC.bed.gz.tbi"), file(pop) //, val(pop), val(maf), val(sm)
@@ -114,6 +112,7 @@ process vcf_to_eigstrat_files {
   tag {"PREPARE EIGENSTRAT FILES"}
 
   label 'postgatk'
+  label 'xs'
 
   // conda '/projects/b1059/software/conda_envs/vcffixup'
 
@@ -174,6 +173,7 @@ process pca_tree {
   publishDir "${params.output}/EIGESTRAT/LD_${test_ld}/Tree/", mode: 'copy'
 
   label 'post'
+  label 'xs'
 
   // conda '/projects/b1059/software/conda_envs/vcffixup'
 
@@ -212,6 +212,7 @@ process run_eigenstrat_no_outlier_removal {
   publishDir "${params.output}/EIGESTRAT/LD_${test_ld}/NO_REMOVAL/", mode: 'copy'
 
   label 'pca'
+  label 'xs'
 
   // conda '/projects/b1059/software/conda_envs/vcffixup'
 
@@ -248,6 +249,7 @@ process run_eigenstrat_with_outlier_removal {
   // conda '/projects/b1059/software/conda_envs/vcffixup'
 
   label 'pca'
+  label 'xs'
 
   publishDir "${params.output}/EIGESTRAT/LD_${test_ld}/OUTLIER_REMOVAL/${num_outliers}/", mode: 'copy'
 
@@ -284,6 +286,7 @@ process run_eigenstrat_with_outlier_removal {
 process HTML_report_PCA {
 
   label 'R'
+  label 'xs'
 
   // conda '/projects/b1059/software/conda_envs/cegwas2-nf_env'
 

@@ -6,11 +6,9 @@
 process subset_iso_ref_strains {
 
     label 'postgatk'
+    label 'md'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
-
-    memory 20.GB
-    cpus 4
 
     publishDir "${params.output}/variation", mode: 'copy'
     publishDir "${params.output}/NemaScan", pattern: "div_isotype_list.txt", mode: 'copy'
@@ -56,11 +54,9 @@ process subset_iso_ref_strains {
 process subset_iso_ref_soft {
 
     label 'postgatk'
+    label 'md'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
-
-    memory 20.GB
-    cpus 4
 
     publishDir "${params.output}/variation", mode: 'copy'
 
@@ -100,6 +96,7 @@ process subset_iso_ref_soft {
 process subset_snv {
 
     label 'postgatk'
+    label 'xs'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
@@ -128,6 +125,7 @@ process subset_snv {
 process make_small_vcf {
 
     label 'postgatk'
+    label 'xs'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
     publishDir "${params.output}/variation", mode: 'copy'
@@ -159,10 +157,9 @@ process convert_tree {
     // label 'tree'
     // container 'shub://bioconvert/bioconvert:latest'
 
-     conda "/projects/b1059/software/conda_envs/popgen-nf_env"
-
-    memory { 24.GB + 10.GB * task.attempt }
-    errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
+    conda "${params.softwareDir}/software/conda_envs/popgen-nf_env"
+    
+    label 'lg'
 
     input:
         tuple file(vcf), file(vcf_index)
@@ -187,9 +184,8 @@ process convert_tree {
 process quick_tree {
 
     label 'tree'
+    label 'lg'
 
-    memory { 44.GB + 10.GB * task.attempt }
-    errorStrategy { task.attempt < 5 ? 'retry' : 'ignore' }
     publishDir "${params.output}/tree", mode: 'copy'
 
     input:
@@ -211,7 +207,7 @@ process quick_tree {
 process plot_tree {
 
     label 'R'
-    memory { 24.GB + 10.GB * task.attempt }
+    label 'lg'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
 
@@ -240,13 +236,11 @@ process plot_tree {
 process haplotype_sweep_IBD {
 
     label 'postgatk'
+    label 'md'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
     publishDir "${params.output}/haplotype", mode: 'copy'
-
-    memory 17.GB
-    cpus 4
 
     input:
         tuple file(vcf), file(vcf_index), val(contig)
@@ -266,11 +260,9 @@ process haplotype_sweep_IBD {
 process haplotype_sweep_plot {
 
     label 'R'
+    label 'lg'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
-
-    memory { 20.GB + 20.GB * task.attempt }
-    errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
 
     publishDir "${params.output}/haplotype", mode: 'copy'
     publishDir "${params.output}/NemaScan", pattern: "haplotype_df_isotype.bed", mode: 'copy'
@@ -301,6 +293,7 @@ process haplotype_sweep_plot {
 process prep_variant_coverage {
 
     label 'postgatk'
+    label 'xs'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
@@ -335,6 +328,7 @@ process prep_variant_coverage {
 process count_variant_coverage {
 
     label 'postgatk'
+    label 'xs'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
@@ -367,6 +361,7 @@ process count_variant_coverage {
 process define_divergent_region {
 
     label 'R'
+    label 'lg'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
 
@@ -374,8 +369,6 @@ process define_divergent_region {
     publishDir "${params.output}/NemaScan", pattern: 'divergent_bins.bed', mode: 'copy'
     publishDir "${params.output}/NemaScan", pattern: 'divergent_df_isotype.bed', mode: 'copy'
 
-    memory { 128.GB + 20.GB * task.attempt }
-    // errorStrategy { task.attempt < 4 ? 'retry' : 'ignore' }
     errorStrategy 'ignore'
 
     input:
@@ -404,7 +397,8 @@ process define_divergent_region {
 process get_species_sheet {
 
     label 'R'
-    
+    label 'xs'
+
     publishDir "${params.output}/NemaScan/", mode: 'copy'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf-r_env"
