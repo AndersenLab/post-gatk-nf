@@ -236,7 +236,7 @@ process plot_tree {
 process haplotype_sweep_IBD {
 
     label 'postgatk'
-    label 'md'
+    label 'ml'
 
     // conda "/projects/b1059/software/conda_envs/popgen-nf_env"
 
