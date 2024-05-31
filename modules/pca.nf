@@ -92,9 +92,8 @@ process annotate_small_vcf {
 process get_singletons {
   tag {"PREPARE EIGENSTRAT FILES"}
 
-  
-  
-  conda '/home/rjm6024/.conda/envs/singleton_filerting'
+  label 'vcftools'
+  label 'xs'
   
   input:
       tuple file(vcf), file(vcfindex)
@@ -172,7 +171,7 @@ process pca_tree {
 
   publishDir "${params.output}/EIGESTRAT/LD_${test_ld}/Tree/", mode: 'copy'
 
-  label 'post'
+  label 'pca'
   label 'xs'
 
   // conda '/projects/b1059/software/conda_envs/vcffixup'
