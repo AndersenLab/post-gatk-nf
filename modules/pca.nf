@@ -134,7 +134,7 @@ process vcf_to_eigstrat_files {
 
     plink --vcf ce_norm.vcf.gz --snps-only --biallelic-only --set-missing-var-ids @:# --indep-pairwise 50 10 ${test_ld} --allow-extra-chr 
 
-    plink --vcf ce_norm.vcf.gz --biallelic-only --set-missing-var-ids @:# --extract plink.prune.in --exclude ${singleton_ids} --geno 0 --recode12 --out eigenstrat_input --allow-extra-chr --make-bed   
+    plink --vcf ce_norm.vcf.gz --biallelic-only --set-missing-var-ids @:# --extract plink.prune.in --exclude ${singleton_ids} --geno 0 --recode 12 --out eigenstrat_input --allow-extra-chr --make-bed   
    
     awk '{print \$2}' OFS="\t" eigenstrat_input.bim | 
     awk -F":" '\$1=\$1' OFS="\t"| sort -k1,1d -k2,2n > eiganstrat_markers.txt
@@ -142,9 +142,7 @@ process vcf_to_eigstrat_files {
     bcftools view -T eiganstrat_markers.txt -Oz -o eiganstrat_input.vcf.gz ce_norm.vcf.gz
 
     bcftools query -l ce_norm.vcf.gz |\\
-    sort > sorted_samples.txt 
-
-    
+    sort > sorted_samples.txt
 
     cat eigenstrat_input.bim |\\
     sed 's/^III/3/g' |\\
