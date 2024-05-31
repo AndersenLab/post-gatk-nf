@@ -186,11 +186,11 @@ workflow {
         //   count_variant_coverage.out.collect() | define_divergent_region
         // }
 
-        // // collect snv vcf for pca
-        // pca_vcf = subset_snv.out
+        // collect snv vcf for pca
+        pca_vcf = subset_snv.out
 
-        // // generate pops file for pca
-        // pop_strains = subset_iso_ref_strains.out.pop_strains
+        // generate pops file for pca
+        pop_strains = subset_iso_ref_strains.out.pop_strains
     }
 
     // PCA analysis
