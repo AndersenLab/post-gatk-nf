@@ -191,6 +191,11 @@ workflow {
 
         // generate pops file for pca
         pop_strains = subset_iso_ref_strains.out.pop_strains
+
+        if(params.delly) {
+            input_vcf.combine()
+
+        }
     }
 
     // PCA analysis

@@ -412,3 +412,23 @@ process get_species_sheet {
     """
 
 }
+
+process delly_call_indel {
+
+    label 'delly'
+    label 'md'
+
+    publishDir "${params.output}/Delly/", mode: 'copy'
+
+    input:
+        tuple file(vcf), file(vcf_index), file(genome), file(genome_index), file(bam), file(bam_index)
+
+    output:
+        file("strain_isotype_lookup.tsv")
+
+    """
+    delly call -t INS -g genome bam > 
+        
+    """
+
+}
