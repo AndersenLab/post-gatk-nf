@@ -49,7 +49,7 @@ source activate /data/eande106/software/conda_envs/nf23_env
 
 # Usage
 
-*Note: if you are having issues running Nextflow or need reminders, check out the [Nextflow](../rockfish/rf-nextflow.md) page.*
+*Note: if you are having issues running Nextflow or need reminders, check out the [Nextflow](http://andersenlab.org/dry-guide/latest/rockfish/rf-nextflow/) page.*
 
 ## Testing on Rockfish
 
