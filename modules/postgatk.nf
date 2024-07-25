@@ -421,14 +421,16 @@ process delly_call_indel {
     publishDir "${params.output}/Delly/", mode: 'copy'
 
     input:
-        tuple file(vcf), file(vcf_index), file(genome), file(genome_index), file(bam), file(bam_index)
+        tuple file(vcf), file(vcf_index), file(genome), file(genome_index), file(bam), file(bam_index) val(out_prefix)
 
     output:
-        file("strain_isotype_lookup.tsv")
+        file("${out_prefix}.vcf")
 
     """
-    delly call -t INS -g genome bam > 
-        
+    delly call -t INS -g genome bam > INS.vcf
+    delly call -t DEL -g genome bam > DEL.vcf
+    delly merge -o INDEL.vcf INS.vcf DEL.vcf
+    delly filter -f somatic -o ${out_prefix}.vcf -a 0.25 INDEL.vcf
     """
 
 }
