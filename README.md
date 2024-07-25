@@ -30,6 +30,8 @@ This pipeline performs population genetics analyses (such as identifying shared 
     --sample_sheet          TSV with column iso-ref strain, bam, bai (no header)   (required)
     --species               Species: 'c_elegans', 'c_tropicalis' or 'c_briggsae'   c_elegans
     --output                Output folder name.                                    popgen-date (in current folder)
+    --postgatk              Run post-GATK steps                                    true
+    --pca                   Run PCA analysis                                       false
 
 
 ```
@@ -47,7 +49,7 @@ source activate /data/eande106/software/conda_envs/nf23_env
 
 # Usage
 
-*Note: if you are having issues running Nextflow or need reminders, check out the [Nextflow](../rockfish/rf-nextflow.md) page.*
+*Note: if you are having issues running Nextflow or need reminders, check out the [Nextflow](http://andersenlab.org/dry-guide/latest/rockfish/rf-nextflow/) page.*
 
 ## Testing on Rockfish
 

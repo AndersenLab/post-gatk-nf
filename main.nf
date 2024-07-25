@@ -110,6 +110,8 @@ nextflow main.nf -profile quest --vcf=hard-filtered.vcf --sample_sheet=sample_sh
     --vcf_folder         Path to folder containing hard and soft VCF              ${params.vcf_folder}
     --sample_sheet       TSV with column iso-ref strain, bam, bai. no header      ${params.sample_sheet}
     --output             (Optional) output folder name                            ${params.output}
+	--postgatk           Run post-GATK steps                                      ${params.postgatk}
+	--pca                Run PCA analysis                                         ${params.pca}
  
     username                                                                      ${"whoami".execute().in.text}
 
@@ -281,6 +283,8 @@ workflow.onComplete {
     Species: ${params.species}
     Vcf_folder: ${params.vcf_folder}
     Sample_sheet: ${params.sample_sheet}
+    postgatk: ${params.postgatk}
+    pca: ${params.pca}
     Output: ${params.output}
     """
 
