@@ -40,11 +40,11 @@ This pipeline performs population genetics analyses (such as identifying shared 
 
 ## Software Requirements
 
-* The latest update requires Nextflow version 23+. On Rockfish, you can access this version by loading the `nf23_env` conda environment prior to running the pipeline command:
+* The latest update requires Nextflow version 24+. On Rockfish, you can access this version by loading the `nf24_env` conda environment prior to running the pipeline command:
 
 ```
 module load python/anaconda
-source activate /data/eande106/software/conda_envs/nf23_env
+source activate /data/eande106/software/conda_envs/nf24_env
 ```
 
 # Usage
