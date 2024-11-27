@@ -31,7 +31,7 @@ if (params.debug) {
     params.soft_vcf = "${params.vcf_folder}/*.soft-filter.vcf.gz"
 
     // folder for the bam files. currently need to put all bam in the same folder
-    params.bam_folder = "${dataDir}/${params.species}/WI/alignments/"
+    params.bam_folder = "${params.dataDir}/${params.species}/WI/alignments/"
     params.output = "popgen-${date}"
     // PCA params
     params.anc = null
@@ -39,6 +39,36 @@ if (params.debug) {
     params.eigen_ld = null
     params.pca_vcf = null
     params.outlier_iterations = "5"
+}
+
+// set project and build defaults for CE, CB, and CT, can always change with argument.
+if(params.species == "c_elegans") {
+    params.project="PRJNA13758"
+    params.ws_build="WS283"
+} else if(params.species == "c_briggsae") {
+    params.project="QX1410_nanopore"
+    params.ws_build="Feb2020"
+} else if(params.species == "c_tropicalis") {
+    params.project="NIC58_nanopore"
+    params.ws_build="June2021"
+}
+
+// Define the genome
+if(params.species == "c_elegans" | params.species == "c_briggsae" | params.species == "c_tropicalis") {
+    params.reference = "${params.dataDir}/${params.species}/genomes/${params.project}/${params.ws_build}/${params.species}.${params.project}.${params.ws_build}.genome.fa.gz"
+    params.reference_index = "${params.reference}.fai"
+} else if (params.species == null) {
+    if (params.reference == null) {
+        if (params.help) {
+        } else { 
+        println """
+
+        Please specify a species: c_elegans c_brigssae c_tropicalis with option --species, or a ref genome with --reference"
+
+        """
+        exit 1
+        }
+    }
 }
 
 // more params
@@ -112,6 +142,7 @@ nextflow main.nf -profile quest --vcf=hard-filtered.vcf --sample_sheet=sample_sh
     --output             (Optional) output folder name                            ${params.output}
 	--postgatk           Run post-GATK steps                                      ${params.postgatk}
 	--pca                Run PCA analysis                                         ${params.pca}
+	--delly              Run delly INDEL calling                                  ${params.delly}
  
     username                                                                      ${"whoami".execute().in.text}
 
@@ -132,8 +163,9 @@ if (params.help) {
 
 // import the pca module
 include {extract_ancestor_bed; annotate_small_vcf; vcf_to_eigstrat_files; run_eigenstrat_no_outlier_removal; run_eigenstrat_with_outlier_removal; HTML_report_PCA; get_singletons} from './modules/pca.nf'
-include {subset_iso_ref_strains; subset_iso_ref_soft; subset_snv; make_small_vcf; convert_tree; quick_tree; plot_tree; haplotype_sweep_IBD; haplotype_sweep_plot; 
-    define_divergent_region; prep_variant_coverage; count_variant_coverage; get_species_sheet} from './modules/postgatk.nf'
+include {subset_iso_ref_strains; subset_iso_ref_soft; subset_snv; make_small_vcf; convert_tree} from './modules/postgatk.nf'
+include {quick_tree; plot_tree; haplotype_sweep_IBD; haplotype_sweep_plot;  define_divergent_region} from './modules/postgatk.nf'
+include {prep_variant_coverage; count_variant_coverage; get_species_sheet; delly_call_indel} from './modules/postgatk.nf'
 
 
 workflow { 
@@ -175,10 +207,12 @@ workflow {
         subset_iso_ref_strains.out.vcf.combine(contigs) | haplotype_sweep_IBD
         subset_iso_ref_strains.out.vcf.combine(sample_sheet).combine(isotype_convert_table) | prep_variant_coverage 
 
-        prep_variant_coverage.out
+        bam_file_sets = prep_variant_coverage.out
             .collectFile(name: "test.tsv", keepHeader: true)
             .splitCsv(header:true)
-            .map { row -> [ row.strain, file(row.bam), file(row.bai) ] }
+            .map { row -> [ row.strain, file(row.bam), file(row.bai) ] }.view()
+            
+        bam_file_sets
             .combine(subset_iso_ref_strains.out.vcf) | count_variant_coverage
 
 
@@ -195,8 +229,11 @@ workflow {
         pop_strains = subset_iso_ref_strains.out.pop_strains
 
         if(params.delly) {
-            input_vcf.combine()
-
+            input_vcf
+                .combine(input_vcf_index)
+                .combine(Channel.fromPath(params.reference))
+                .combine(Channel.fromPath(params.reference_index))
+                .combine(bam_file_sets) | delly_call_indel
         }
     }
 
