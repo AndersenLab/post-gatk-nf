@@ -73,6 +73,31 @@ process annotate_small_vcf {
       """
 }
 
+/*
+------------ Filter VCF by population strain list  
+*/
+
+process filter_pca_vcf {
+
+    label 'postgatk'
+    label 'xs'
+
+    input:
+      tuple file(vcf), file(vcfindex)
+      path pop
+
+    output:
+      tuple path("filtered.vcf.gz"), file("filtered.vcf.gz.tbi")
+
+
+      """
+        bcftools view -S ${pop} ${vcf} -O z | \\
+        bcftools filter -i N_MISSING=0 -O z -o filtered.vcf.gz
+
+        tabix -p vcf filtered.vcf.gz
+      """
+}
+
 
 
 /*

@@ -162,7 +162,9 @@ if (params.help) {
 }
 
 // import the pca module
-include {extract_ancestor_bed; annotate_small_vcf; vcf_to_eigstrat_files; run_eigenstrat_no_outlier_removal; run_eigenstrat_with_outlier_removal; HTML_report_PCA; get_singletons} from './modules/pca.nf'
+include {extract_ancestor_bed; annotate_small_vcf; vcf_to_eigstrat_files} from './modules/pca.nf'
+include {run_eigenstrat_no_outlier_removal; run_eigenstrat_with_outlier_removal; HTML_report_PCA} from './modules/pca.nf'
+include {get_singletons; filter_pca_vcf} from './modules/pca.nf'
 include {subset_iso_ref_strains; subset_iso_ref_soft; subset_snv; make_small_vcf; convert_tree} from './modules/postgatk.nf'
 include {quick_tree; plot_tree; haplotype_sweep_IBD; haplotype_sweep_plot;  define_divergent_region} from './modules/postgatk.nf'
 include {prep_variant_coverage; count_variant_coverage; get_species_sheet; delly_call_indel} from './modules/postgatk.nf'
@@ -246,8 +248,9 @@ workflow {
 
         // check if pca only or also postgatk
         if(!params.postgatk) {
-            pca_vcf = Channel.fromPath("${params.pca_vcf}").combine(Channel.fromPath("${params.pca_vcf}.tbi"))
+            initial_pca_vcf = Channel.fromPath("${params.pca_vcf}").combine(Channel.fromPath("${params.pca_vcf}.tbi"))
             pop_strains = Channel.fromPath("${params.pops}")
+            pca_vcf = filter_pca_vcf( initial_pca_vcf, pop_strains )
         }
 
         // extract ancestor
